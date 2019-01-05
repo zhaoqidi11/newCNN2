@@ -95,9 +95,6 @@ class JingweiXu():
                     output = net.forward()
                     FrameSqueezeNetOUT.extend(np.squeeze(output['pool10']))
 
-                    # if i == Count - Count % 100 - 1:
-                    #     Frame_Eigenvector =
-
         NewCount = Count % 100
         if NewCount > 0:
             Frame_Eigenvector = [ ]
