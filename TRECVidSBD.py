@@ -45,25 +45,29 @@ class JingweiXu():
         import math
         import cv2
         import numpy as np
+        import sys
+        sys.path.insert(0, '/media/user02/New Volume/caffe/python')
         import caffe
 
-        # caffe.set_mode_gpu()
-        # caffe.set_device(0)
-        caffe.set_mode_cpu()
+        caffe.set_mode_gpu()
+        caffe.set_device(0)
+        # caffe.set_mode_cpu()
 
         WindowsPath = 'E:\\Meisa_SiameseNetwork\\SqueezeNet\\'
+        LinuxPath = '/media/user02/New Volume/Meisa/squeezenet/'
 
-        SqueezeNet_Def = WindowsPath + 'deploy.prototxt'
-        SqueezeNet_Weight = WindowsPath + 'squeezenet_v1.1.caffemodel'
+        SqueezeNet_Def = LinuxPath + 'deploy.prototxt'
+        SqueezeNet_Weight = LinuxPath + 'squeezenet_v1.1.caffemodel'
         net = caffe.Net(SqueezeNet_Def,
                         SqueezeNet_Weight,
                         caffe.TEST)
 
         transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
         transformer.set_transpose('data', (2, 0, 1))
-        # transformer.set_mean('data', mu)
-        transformer.set_raw_scale('data', 255)
-        transformer.set_channel_swap('data', (2, 1, 0))
+        mu = np.array([114, 119, 112])
+        transformer.set_mean('data', mu)
+        # transformer.set_raw_scale('data', 255)
+        # transformer.set_channel_swap('data', (2, 1, 0))
 
         # It save the batch size
         BatchSize = 100
@@ -77,7 +81,7 @@ class JingweiXu():
 
         SegmentsLength = 11
 
-        AllFramesInThisVideo = glob(VideoPath + '\\*.jpeg')
+        AllFramesInThisVideo = glob(VideoPath + '/*.jpeg')
 
         # It save the number of frames in this video
         FrameNumber = len(AllFramesInThisVideo)
@@ -92,9 +96,9 @@ class JingweiXu():
         if Count >= BatchSize:
             for i in range(Count - Count % BatchSize):
                 if i % BatchSize == 0:
-                    Frame_Eigenvector = np.array([transformer.preprocess('data', caffe.io.load_image(AllFramesInThisVideo[i]))])
+                    Frame_Eigenvector = np.array([transformer.preprocess('data', cv2.imread(AllFramesInThisVideo[i]))])
                 else:
-                    Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',caffe.io.load_image(AllFramesInThisVideo[(SegmentsLength - 1) * i]))])])
+                    Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',cv2.imread(AllFramesInThisVideo[(SegmentsLength - 1) * i]))])])
                 if i % BatchSize == BatchSize-1:
                     net.blobs['data'].data[...] = Frame_Eigenvector
                     output = net.forward()
@@ -102,9 +106,9 @@ class JingweiXu():
 
         NewCount = Count % BatchSize
         if NewCount > 0:
-            Frame_Eigenvector = np.array([transformer.preprocess('data', caffe.io.load_image((AllFramesInThisVideo[Count - Count % BatchSize])))])
+            Frame_Eigenvector = np.array([transformer.preprocess('data', cv2.imread((AllFramesInThisVideo[Count - Count % BatchSize])))])
             for i in range(Count - Count % BatchSize+1, Count):
-                Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',caffe.io.load_image( AllFramesInThisVideo[(SegmentsLength - 1) * i]))])])
+                Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',cv2.imread( AllFramesInThisVideo[(SegmentsLength - 1) * i]))])])
 
             net.blobs['data'].reshape(NewCount,
                                       3,
@@ -115,7 +119,7 @@ class JingweiXu():
 
         for i in range(Count-1):
             d.append(self.cosin_distance(FrameSqueezeNetOUT[i], FrameSqueezeNetOUT[i+1]))
-        GroupLength = 10
+        GroupLength = 20
         # The number of group
         GroupNumber = int(math.ceil(float(len(d)) / GroupLength))
 
@@ -240,9 +244,10 @@ class JingweiXu():
 
         print "MissHard No. is ", len(MissHard)
         print "MissGra No. is ", len(MissGra)
-
-        print 'Hard Rate is ', (len(HardCutTruth) - len(MissHard)) / float(len(HardCutTruth))
-        print 'Gra Rate is ', (len(GradualTruth) - len(MissGra)) / float(len(GradualTruth))
+        if len(HardCutTruth)>0:
+            print 'Hard Rate is ', (len(HardCutTruth) - len(MissHard)) / float(len(HardCutTruth))
+        if len(GradualTruth)>0:
+            print 'Gra Rate is ', (len(GradualTruth) - len(MissGra)) / float(len(GradualTruth))
 
         return [HardCutTruth, GradualTruth]
 
@@ -417,12 +422,12 @@ class JingweiXu():
         from glob import glob
 
         # The path of TRECVid2007
-        VideoPath = 'E:\\Meisa_SiameseNetwork\\sv2007sbtest1\\AllImages\\'
+        VideoPath = '/media/user02/New Volume/TRECVid2007/'
         # Get all Folders
         AllFolders = glob(VideoPath + '*')
 
         # Get all reference
-        Allxml = glob('E:\\Meisa_SiameseNetwork\\sv2007sbtest1\\sbref071\\ref\\ref*.xml')
+        Allxml = glob('/media/user02/New Volume/TRECVid2007ref/ref*.xml')
 
         for i in range(len(AllFolders)):
             with open(Allxml[i]) as f:
