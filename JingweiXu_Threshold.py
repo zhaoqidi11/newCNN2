@@ -1,6 +1,6 @@
 class JingweiXu():
-    Video_path = '/data/RAIDataset/Video/10.mp4'
-    GroundTruth_path = '/data/RAIDataset/Video/gt_10.txt'
+    Video_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/25012.mp4'
+    GroundTruth_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/gt_25012.txt'
 
     def get_vector(self, segments):
         import sys
@@ -229,21 +229,23 @@ class JingweiXu():
         import math
         import cv2
         import numpy as np
+        import sys
+        sys.path.insert(0, '/media/user02/New Volume/caffe/python')
         import caffe
 
         caffe.set_mode_gpu()
         caffe.set_device(0)
 
-        SqueezeNet_Def = '/data/SqueezeNet/deploy.prototxt'
-        SqueezeNet_Weight = '/data/SqueezeNet/squeezenet_v1.1.caffemodel'
+        SqueezeNet_Def = '/media/user02/New Volume/Meisa/squeezenet/deploy.prototxt'
+        SqueezeNet_Weight = '/media/user02/New Volume/Meisa/squeezenet/squeezenet_v1.1.caffemodel'
         net = caffe.Net(SqueezeNet_Def,
                         SqueezeNet_Weight,
                         caffe.TEST)
         transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
         transformer.set_transpose('data', (2, 0, 1))
         # transformer.set_mean('data', mu)
-        transformer.set_raw_scale('data', 255)
-        transformer.set_channel_swap('data', (2, 1, 0))
+        # transformer.set_raw_scale('data', 255)
+        # transformer.set_channel_swap('data', (2, 1, 0))
         net.blobs['data'].reshape(1,
                                   3,
                                   227, 227)
