@@ -58,12 +58,17 @@ class JingweiXu():
         net = caffe.Net(SqueezeNet_Def,
                         SqueezeNet_Weight,
                         caffe.TEST)
+
         transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
         transformer.set_transpose('data', (2, 0, 1))
         # transformer.set_mean('data', mu)
         transformer.set_raw_scale('data', 255)
         transformer.set_channel_swap('data', (2, 1, 0))
-        net.blobs['data'].reshape(100,
+
+        # It save the batch size
+        BatchSize = 100
+
+        net.blobs['data'].reshape(BatchSize,
                                   3,
                                   227, 227)
 
@@ -84,37 +89,32 @@ class JingweiXu():
         NewCount = 0
         FrameSqueezeNetOUT = []
 
-        if Count >= 100:
-            for i in range(0,Count - Count % 100):
-                if i % 100 == 0:
+        if Count >= BatchSize:
+            for i in range(Count - Count % BatchSize):
+                if i % BatchSize == 0:
                     Frame_Eigenvector = np.array([transformer.preprocess('data', caffe.io.load_image(AllFramesInThisVideo[i]))])
                 else:
                     Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',caffe.io.load_image(AllFramesInThisVideo[(SegmentsLength - 1) * i]))])])
-                if i % 100 == 99:
+                if i % BatchSize == BatchSize-1:
                     net.blobs['data'].data[...] = Frame_Eigenvector
                     output = net.forward()
                     FrameSqueezeNetOUT.extend(np.squeeze(output['pool10']))
 
-        NewCount = Count % 100
+        NewCount = Count % BatchSize
         if NewCount > 0:
-            Frame_Eigenvector = [ ]
+            Frame_Eigenvector = np.array([transformer.preprocess('data', caffe.io.load_image((AllFramesInThisVideo[Count - Count % BatchSize])))])
+            for i in range(Count - Count % BatchSize+1, Count):
+                Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',caffe.io.load_image( AllFramesInThisVideo[(SegmentsLength - 1) * i]))])])
+
             net.blobs['data'].reshape(NewCount,
                                       3,
                                       227, 227)
-            for i in range(NewCount):
-                Frame_Eigenvector = np.concatenate((Frame_Eigenvector, [transformer.preprocess('data',
-                                                                                               caffe.io.load_image(
-                                                                                                   AllFramesInThisVideo[
-                                                                                                       (
-                                                                                                                   SegmentsLength - 1) * i]))]),
-                                                   axis=0)
-
             net.blobs['data'].data[...] = Frame_Eigenvector
             output = net.forward()
-            FrameSqueezeNetOUT = np.squeeze(output['pool10'][0]).tolist()
-            for i in range(NewCount - 1):
-                d.append(self.cosin_distance(FrameSqueezeNetOUT[i], FrameSqueezeNetOUT[i + 1]))
+            FrameSqueezeNetOUT.extend(np.squeeze(output['pool10']))
 
+        for i in range(Count-1):
+            d.append(self.cosin_distance(FrameSqueezeNetOUT[i], FrameSqueezeNetOUT[i+1]))
         GroupLength = 10
         # The number of group
         GroupNumber = int(math.ceil(float(len(d)) / GroupLength))
@@ -135,7 +135,7 @@ class JingweiXu():
                 if d[i * GroupLength + j] < Tl[i]:
                     CandidateSegment.append([(i * GroupLength + j) * (SegmentsLength - 1),
                                              (i * GroupLength + j + 1) * (SegmentsLength - 1)])
-                    # print 'A candidate segment is', (i*10+j)*20, '~', (i*10+j+1)*20
+
 
         for i in range(1, len(d) - 1):
             if (d[i] > (3 * d[i - 1]) or d[i] > (3 * d[i + 1])) and d[i] > 0.8 * MIUG:
@@ -147,8 +147,7 @@ class JingweiXu():
                             break
                         j += 1
 
-        if CandidateSegment[-1][1] > LastFrameIndex:
-            CandidateSegment[-1][1] = LastFrameIndex
+
         return CandidateSegment
         # print 'a'
 
@@ -429,7 +428,8 @@ class JingweiXu():
             with open(Allxml[i]) as f:
                 xmlfile = f.readlines()
             [HardTruth, GraTruth] = self.GetLabels(xmlfile)
-            self.CTDetectionBaseOnHist(AllFolders[i], HardTruth, GraTruth)
+            # self.CTDetectionBaseOnHist(AllFolders[i], HardTruth, GraTruth)
+            self.CheckSegments(self.CutVideoIntoSegmentsBaseOnNeuralNet(AllFolders[i]), HardTruth, GraTruth)
 
         print 'a'
 
