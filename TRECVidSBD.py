@@ -64,7 +64,7 @@ class JingweiXu():
 
         transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
         transformer.set_transpose('data', (2, 0, 1))
-        mu = np.array([114, 119, 112])
+        mu = np.array([104, 117, 123])#It is mean value "BGR" "ImageNet2012"
         transformer.set_mean('data', mu)
         # transformer.set_raw_scale('data', 255)
         # transformer.set_channel_swap('data', (2, 1, 0))
@@ -115,7 +115,10 @@ class JingweiXu():
                                       227, 227)
             net.blobs['data'].data[...] = Frame_Eigenvector
             output = net.forward()
-            FrameSqueezeNetOUT.extend(np.squeeze(output['pool10']))
+            if output['pool10'].shape[0] == 1:
+                FrameSqueezeNetOUT.append(np.squeeze(output['pool10']).reshape(1000))
+            else:
+                FrameSqueezeNetOUT.extend(np.squeeze(output['pool10']))
 
         for i in range(Count-1):
             d.append(self.cosin_distance(FrameSqueezeNetOUT[i], FrameSqueezeNetOUT[i+1]))
@@ -124,7 +127,7 @@ class JingweiXu():
         GroupNumber = int(math.ceil(float(len(d)) / GroupLength))
 
         MIUG = np.mean(d)
-        a = 0.7  # The range of a is 0.5~0.7
+        a = 0.8 # The range of a is 0.5~0.7
         Tl = []  # It save the Tl of each group
         CandidateSegment = []
         for i in range(GroupNumber):
@@ -132,7 +135,8 @@ class JingweiXu():
             MIUL = np.mean(d[GroupLength * i:GroupLength * i + GroupLength])
             SigmaL = np.std(d[GroupLength * i:GroupLength * i + GroupLength])
 
-            Tl.append(MIUL + a * (1 + math.log(MIUG / MIUL)) * SigmaL)
+            # Tl.append(MIUL + a * (1 + math.log(MIUG / MIUL)) * SigmaL)
+            Tl.append(1.1 * MIUL + 0.6 * (MIUG/MIUL) * SigmaL)
             for j in range(GroupLength):
                 if i * GroupLength + j >= len(d):
                     break
@@ -249,7 +253,7 @@ class JingweiXu():
         if len(GradualTruth)>0:
             print 'Gra Rate is ', (len(GradualTruth) - len(MissGra)) / float(len(GradualTruth))
 
-        return [HardCutTruth, GradualTruth]
+        return [MissHard, MissGra]
 
     def CTDetectionBaseOnHist(self, VideoPath, HardCutTruth, GradualTruth):
         import numpy as np
@@ -429,13 +433,22 @@ class JingweiXu():
         # Get all reference
         Allxml = glob('/media/user02/New Volume/TRECVid2007ref/ref*.xml')
 
+        AllHard = 0
+        AllGra = 0
+        AllMissHard = 0
+        AllMissGra = 0
         for i in range(len(AllFolders)):
             with open(Allxml[i]) as f:
                 xmlfile = f.readlines()
             [HardTruth, GraTruth] = self.GetLabels(xmlfile)
+            AllHard += len(HardTruth)
+            AllGra += len(GraTruth)
             # self.CTDetectionBaseOnHist(AllFolders[i], HardTruth, GraTruth)
-            self.CheckSegments(self.CutVideoIntoSegmentsBaseOnNeuralNet(AllFolders[i]), HardTruth, GraTruth)
-
+            [MissHard, MissGra] = self.CheckSegments(self.CutVideoIntoSegmentsBaseOnNeuralNet(AllFolders[i]), HardTruth, GraTruth)
+            AllMissHard += len(MissHard)
+            AllMissGra += len(MissGra)
+            print 'Now the recall of hard is', (AllHard - AllMissHard) / float(AllHard)
+            print 'Now the recall of gra is', (AllGra - AllMissGra) / float(AllGra)
         print 'a'
 
 
