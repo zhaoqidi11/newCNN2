@@ -48,6 +48,8 @@ class JingweiXu():
         import sys
         sys.path.insert(0, '/media/user02/New Volume/caffe/python')
         import caffe
+        import copy
+
 
         caffe.set_mode_gpu()
         caffe.set_device(0)
@@ -96,13 +98,14 @@ class JingweiXu():
         if Count >= BatchSize:
             for i in range(Count - Count % BatchSize):
                 if i % BatchSize == 0:
-                    Frame_Eigenvector = np.array([transformer.preprocess('data', cv2.imread(AllFramesInThisVideo[i]))])
+                    Frame_Eigenvector = np.array([transformer.preprocess('data', cv2.imread(AllFramesInThisVideo[(SegmentsLength - 1) * i]))])
                 else:
                     Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',cv2.imread(AllFramesInThisVideo[(SegmentsLength - 1) * i]))])])
+
                 if i % BatchSize == BatchSize-1:
                     net.blobs['data'].data[...] = Frame_Eigenvector
                     output = net.forward()
-                    FrameSqueezeNetOUT.extend(np.squeeze(output['pool10']))
+                    FrameSqueezeNetOUT.extend(copy.deepcopy(np.squeeze(output['pool10'])))
 
         NewCount = Count % BatchSize
         if NewCount > 0:
@@ -115,10 +118,11 @@ class JingweiXu():
                                       227, 227)
             net.blobs['data'].data[...] = Frame_Eigenvector
             output = net.forward()
+
             if output['pool10'].shape[0] == 1:
-                FrameSqueezeNetOUT.append(np.squeeze(output['pool10']).reshape(1000))
+                FrameSqueezeNetOUT.append(copy.deepcopy(np.squeeze(output['pool10']).reshape(1000)))
             else:
-                FrameSqueezeNetOUT.extend(np.squeeze(output['pool10']))
+                FrameSqueezeNetOUT.extend(copy.deepcopy(np.squeeze(output['pool10'])))
 
         for i in range(Count-1):
             d.append(self.cosin_distance(FrameSqueezeNetOUT[i], FrameSqueezeNetOUT[i+1]))
@@ -127,7 +131,7 @@ class JingweiXu():
         GroupNumber = int(math.ceil(float(len(d)) / GroupLength))
 
         MIUG = np.mean(d)
-        a = 0.8 # The range of a is 0.5~0.7
+        a = 0.7 # The range of a is 0.5~0.7
         Tl = []  # It save the Tl of each group
         CandidateSegment = []
         for i in range(GroupNumber):
@@ -135,8 +139,8 @@ class JingweiXu():
             MIUL = np.mean(d[GroupLength * i:GroupLength * i + GroupLength])
             SigmaL = np.std(d[GroupLength * i:GroupLength * i + GroupLength])
 
-            # Tl.append(MIUL + a * (1 + math.log(MIUG / MIUL)) * SigmaL)
-            Tl.append(1.1 * MIUL + 0.6 * (MIUG/MIUL) * SigmaL)
+            Tl.append(MIUL + a * (1 + math.log(MIUG / MIUL)) * SigmaL)
+            # Tl.append(1.1 * MIUL + 0.6 * (MIUG/MIUL) * SigmaL)
             for j in range(GroupLength):
                 if i * GroupLength + j >= len(d):
                     break

@@ -1,6 +1,6 @@
 class JingweiXu():
-    Video_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/25012.mp4'
-    GroundTruth_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/gt_25012.txt'
+    Video_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/23553.mp4'
+    GroundTruth_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/gt_23553.txt'
 
     def get_vector(self, segments):
         import sys
@@ -316,6 +316,8 @@ class JingweiXu():
             output = net.forward()
             Frame_First = np.squeeze(output['pool10'][0]).tolist()
 
+            if i == 100:
+                print "a"
             d.append(self.cosin_distance(Frame_First, Frame_Last))
 
 
