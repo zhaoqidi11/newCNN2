@@ -139,8 +139,8 @@ class JingweiXu():
             MIUL = np.mean(d[GroupLength * i:GroupLength * i + GroupLength])
             SigmaL = np.std(d[GroupLength * i:GroupLength * i + GroupLength])
 
-            Tl.append(MIUL + a * (1 + math.log(MIUG / MIUL)) * SigmaL)
-            # Tl.append(1.1 * MIUL + 0.6 * (MIUG/MIUL) * SigmaL)
+            # Tl.append(MIUL + a * (1 + math.log(MIUG / MIUL)) * SigmaL)
+            Tl.append(1.1 * MIUL + 0.6 * (MIUG/MIUL) * SigmaL)
             for j in range(GroupLength):
                 if i * GroupLength + j >= len(d):
                     break
@@ -441,6 +441,8 @@ class JingweiXu():
         AllGra = 0
         AllMissHard = 0
         AllMissGra = 0
+        AllCandidateSegments = 0
+
         for i in range(len(AllFolders)):
             with open(Allxml[i]) as f:
                 xmlfile = f.readlines()
@@ -448,9 +450,13 @@ class JingweiXu():
             AllHard += len(HardTruth)
             AllGra += len(GraTruth)
             # self.CTDetectionBaseOnHist(AllFolders[i], HardTruth, GraTruth)
-            [MissHard, MissGra] = self.CheckSegments(self.CutVideoIntoSegmentsBaseOnNeuralNet(AllFolders[i]), HardTruth, GraTruth)
+            CandidateSegments = self.CutVideoIntoSegmentsBaseOnNeuralNet(AllFolders[i])
+            [MissHard, MissGra] = self.CheckSegments(CandidateSegments, HardTruth, GraTruth)
+
             AllMissHard += len(MissHard)
             AllMissGra += len(MissGra)
+            AllCandidateSegments += len(CandidateSegments)
+            print 'Now the No. of Candidate Segments is', AllCandidateSegments
             print 'Now the recall of hard is', (AllHard - AllMissHard) / float(AllHard)
             print 'Now the recall of gra is', (AllGra - AllMissGra) / float(AllGra)
         print 'a'

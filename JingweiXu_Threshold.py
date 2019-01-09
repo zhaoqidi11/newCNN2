@@ -1,6 +1,5 @@
 class JingweiXu():
-    Video_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/23553.mp4'
-    GroundTruth_path = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/gt_23553.txt'
+
 
     def get_vector(self, segments):
         import sys
@@ -93,8 +92,6 @@ class JingweiXu():
         return FrameV
 
 
-
-
     def RGBToGray(self, RGBImage):
 
         import numpy as np
@@ -107,38 +104,39 @@ class JingweiXu():
         return np.sum(np.abs(vector1 - vector2))
 
 
-    def getHist(self, frame1, frame2, allpixels):
-        binsnumber = 64
+    # Get the Color Histogram from "frame"
+    def GetFrameHist(self, frame, binsnumber):
         import cv2
-        Bframe1hist = cv2.calcHist([frame1], channels=[0], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-        Bframe2hist = cv2.calcHist([frame2], channels=[0], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
+        Bframehist = cv2.calcHist([frame], channels=[0], mask=None, ranges=[0.0, 255.0], histSize=[binsnumber])
+        Gframehist = cv2.calcHist([frame], channels=[1], mask=None, ranges=[0.0, 255.0], histSize=[binsnumber])
+        Rframehist = cv2.calcHist([frame], channels=[2], mask=None, ranges=[0.0, 255.0], histSize=[binsnumber])
+        return [Bframehist, Gframehist, Rframehist]
 
-        Gframe1hist = cv2.calcHist([frame1], channels=[1], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-        Gframe2hist = cv2.calcHist([frame2], channels=[1], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
+    # Get the Manhattan distance between the histogram of frame1 and frame2
+    def getHist_Manhattan(self, frame1, frame2, allpixels):
 
-        Rframe1hist = cv2.calcHist([frame1], channels=[2], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-        Rframe2hist = cv2.calcHist([frame2], channels=[2], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
+        binsnumber = 64
 
-        distance = self.Manhattan(Bframe1hist, Bframe2hist) + self.Manhattan(Gframe1hist, Gframe2hist) + self.Manhattan(Rframe1hist, Rframe2hist)
-        return distance/(allpixels)
+        [Bframe1hist, Gframe1hist, Rframe1hist] = self.GetFrameHist(frame1, binsnumber)
+        [Bframe2hist, Gframe2hist, Rframe2hist] = self.GetFrameHist(frame2, binsnumber)
 
+        distance_Manhattan = self.Manhattan(Bframe1hist, Bframe2hist) + self.Manhattan(Gframe1hist,
+                                                                                       Gframe2hist) + self.Manhattan(
+            Rframe1hist, Rframe2hist)
+        return distance_Manhattan / allpixels
+
+    # Get the chi square distance between the histogram of frame1 and frame2
     def getHist_chi_square(self, frame1, frame2, allpixels):
-
         import cv2
-
         binsnumber = 64
 
-        Bframe1hist = cv2.calcHist([frame1], channels=[0], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-        Bframe2hist = cv2.calcHist([frame2], channels=[0], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
+        [Bframe1hist, Gframe1hist, Rframe1hist] = self.GetFrameHist(frame1, binsnumber)
+        [Bframe2hist, Gframe2hist, Rframe2hist] = self.GetFrameHist(frame2, binsnumber)
 
-        Gframe1hist = cv2.calcHist([frame1], channels=[1], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-        Gframe2hist = cv2.calcHist([frame2], channels=[1], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-
-        Rframe1hist = cv2.calcHist([frame1], channels=[2], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-        Rframe2hist = cv2.calcHist([frame2], channels=[2], mask=None, ranges=[0.0,255.0], histSize=[binsnumber])
-
-        distance = cv2.compareHist(Bframe1hist, Bframe2hist, method=cv2.HISTCMP_CHISQR)+cv2.compareHist(Gframe1hist, Gframe2hist, method=cv2.HISTCMP_CHISQR)+cv2.compareHist(Rframe1hist, Rframe2hist, method=cv2.HISTCMP_CHISQR)
-        return distance/(allpixels)
+        chi_square_distance = cv2.compareHist(Bframe1hist, Bframe2hist, method=cv2.HISTCMP_CHISQR) + cv2.compareHist(
+            Gframe1hist, Gframe2hist, method=cv2.HISTCMP_CHISQR) + cv2.compareHist(Rframe1hist, Rframe2hist,
+                                                                                   method=cv2.HISTCMP_CHISQR)
+        return chi_square_distance / (allpixels)
 
 
     def CutVideoIntoSegments(self):
@@ -225,103 +223,116 @@ class JingweiXu():
         return CandidateSegment
         #print 'a'
 
-    def CutVideoIntoSegmentsBaseOnNeuralNet(self):
+    def CutVideoIntoSegmentsBaseOnNeuralNet(self, Video_path):
         import math
         import cv2
         import numpy as np
+        import copy
+
         import sys
         sys.path.insert(0, '/media/user02/New Volume/caffe/python')
+
         import caffe
 
         caffe.set_mode_gpu()
         caffe.set_device(0)
 
+        # caffe.set_mode_cpu()
+
         SqueezeNet_Def = '/media/user02/New Volume/Meisa/squeezenet/deploy.prototxt'
         SqueezeNet_Weight = '/media/user02/New Volume/Meisa/squeezenet/squeezenet_v1.1.caffemodel'
+
+        # WindowsPath = 'E:\\Meisa_SiameseNetwork\\SqueezeNet\\'
+        #
+        # SqueezeNet_Def = WindowsPath + 'deploy.prototxt'
+        # SqueezeNet_Weight = WindowsPath + 'squeezenet_v1.1.caffemodel'
+
         net = caffe.Net(SqueezeNet_Def,
                         SqueezeNet_Weight,
                         caffe.TEST)
         transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
         transformer.set_transpose('data', (2, 0, 1))
-        # transformer.set_mean('data', mu)
+        mu = np.array([104, 117, 123]) # Mean Value from "ImageNet2012"
+        transformer.set_mean('data', mu)
         # transformer.set_raw_scale('data', 255)
         # transformer.set_channel_swap('data', (2, 1, 0))
-        net.blobs['data'].reshape(1,
+
+        # It save the batch size
+        BatchSize = 100
+        net.blobs['data'].reshape(BatchSize,
                                   3,
                                   227, 227)
-
 
         # It save the pixel intensity between 20n and 20(n+1)
         d = []
 
         SegmentsLength = 11
 
-        i_Video = cv2.VideoCapture(self.Video_path)
-
-        # get width of this video
-        wid = int(i_Video.get(3))
-
-        # get height of this video
-        hei = int(i_Video.get(4))
-
+        i_Video = cv2.VideoCapture(Video_path)
         if i_Video.isOpened():
             success = True
         else:
             success = False
             print('Can\' open this video!')
 
+        # get width of this video
+        wid = int(i_Video.get(3))
+        # get height of this video
+        hei = int(i_Video.get(4))
         # It save the number of frames in this video
         FrameNumber = int(i_Video.get(7))
 
         # The number of segments
         Count = int(math.ceil(float(FrameNumber) / float(SegmentsLength-1)))
-        for i in range(Count):
 
+        FrameSqueezeNetOUT = []
 
-            i_Video.set(1, (SegmentsLength-1)*i)
-            ret1, frame_20i = i_Video.read()
+        if Count >= BatchSize:
+            for i in range(Count - Count % BatchSize):
+                if i % BatchSize == 0:
+                    i_Video.set(1, (SegmentsLength - 1) * i)
+                    ret0, frame0 = i_Video.read()
+                    Frame_Eigenvector = np.array([transformer.preprocess('data', frame0)])
+                else:
+                    i_Video.set(1, (SegmentsLength - 1) * i)
+                    ret, frame = i_Video.read()
+                    Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data',frame)])])
+                if i % BatchSize == BatchSize-1:
+                    net.blobs['data'].data[...] = Frame_Eigenvector
+                    output = net.forward()
 
-            if((SegmentsLength-1)*(i+1)) >= FrameNumber:
-                i_Video.set(1, FrameNumber-1)
-                ret2, frame_20i1 = i_Video.read()
-                # d.append(np.sum(np.abs(self.RGBToGray(frame_20i) - self.RGBToGray(frame_20i1))))
+                    FrameSqueezeNetOUT.extend(np.squeeze(copy.deepcopy(output['pool10'])))
 
-                transformed_image = transformer.preprocess('data', frame_20i1)
-                net.blobs['data'].data[...] = transformed_image
-                output = net.forward()
-                Frame_Last = np.squeeze(output['pool10'][0]).tolist()
+        NewCount = Count % BatchSize
+        if NewCount > 0:
 
+            i_Video.set(1, Count - Count % BatchSize)
+            ret_new0, frame_new0 = i_Video.read()
 
-                transformed_image = transformer.preprocess('data', frame_20i)
-                net.blobs['data'].data[...] = transformed_image
-                output = net.forward()
-                Frame_First = np.squeeze(output['pool10'][0]).tolist()
+            Frame_Eigenvector = np.array([transformer.preprocess('data', frame_new0)])
+            for i in range(Count - Count % BatchSize+1, Count):
 
-                d.append(self.cosin_distance(Frame_First, Frame_Last))
-                # d.append(self.getHist(frame_20i, frame_20i1, wid*hei))
-                break
+                i_Video.set(1, Count - Count % BatchSize)
+                ret_new, frame_new = i_Video.read()
 
-            i_Video.set(1, (SegmentsLength-1)*(i+1))
-            ret2, frame_20i1 = i_Video.read()
+                Frame_Eigenvector = np.concatenate([Frame_Eigenvector, np.array([transformer.preprocess('data', frame_new)])])
 
-            # d.append(np.sum(np.abs(self.RGBToGray(frame_20i) - self.RGBToGray(frame_20i1))))
-            transformed_image = transformer.preprocess('data', frame_20i1)
-            net.blobs['data'].data[...] = transformed_image
+            net.blobs['data'].reshape(NewCount,
+                                      3,
+                                      227, 227)
+            net.blobs['data'].data[...] = Frame_Eigenvector
+
             output = net.forward()
-            Frame_Last = np.squeeze(output['pool10'][0]).tolist()
 
+            if output['pool10'].shape[0] == 1:
+                FrameSqueezeNetOUT.append(copy.deepcopy(np.squeeze(output['pool10']).reshape(1000)))
+            else:
+                FrameSqueezeNetOUT.extend(copy.deepcopy(np.squeeze(output['pool10'])))
 
-            transformed_image = transformer.preprocess('data', frame_20i)
-            net.blobs['data'].data[...] = transformed_image
-            output = net.forward()
-            Frame_First = np.squeeze(output['pool10'][0]).tolist()
+        for i in range(Count-1):
+            d.append(self.cosin_distance(FrameSqueezeNetOUT[i].tolist(), FrameSqueezeNetOUT[i+1].tolist()))
 
-            if i == 100:
-                print "a"
-            d.append(self.cosin_distance(Frame_First, Frame_Last))
-
-
-        GroupLength = 10
+        GroupLength = 20
         # The number of group
         GroupNumber = int(math.ceil(float(len(d)) / GroupLength))
 
@@ -337,13 +348,14 @@ class JingweiXu():
             MIUL = np.mean(d[GroupLength*i:GroupLength*i+GroupLength])
             SigmaL = np.std(d[GroupLength*i:GroupLength*i+GroupLength])
 
-            Tl.append(MIUL + a*(1+math.log(MIUG/MIUL))*SigmaL)
+            Tl.append(MIUL + a * ( 1 + math.log( MIUG / MIUL ) ) * SigmaL)
+            # Tl.append(1.1 * MIUL + 0.6 * (MIUG / MIUL) * SigmaL)
             for j in range(GroupLength):
                 if i*GroupLength + j >= len(d):
                     break
                 if d[i*GroupLength+j]<Tl[i]:
                     CandidateSegment.append([(i*GroupLength+j)*(SegmentsLength-1), (i*GroupLength+j+1)*(SegmentsLength-1)])
-                    #print 'A candidate segment is', (i*10+j)*20, '~', (i*10+j+1)*20
+
 
 
         for i in range(1,len(d)-1):
@@ -355,14 +367,9 @@ class JingweiXu():
                             CandidateSegment.insert(j, [i*(SegmentsLength-1), (i+1)*(SegmentsLength-1)])
                             break
                         j += 1
-        if CandidateSegment[-1][1]>FrameNumber-1:
-            CandidateSegment[-1][1] = FrameNumber-1
+
         return CandidateSegment
         #print 'a'
-
-
-
-
 
     # Calculate the cosin distance between vector1 and vector2
     def cosin_distance(self, vector1, vector2):
@@ -429,64 +436,41 @@ class JingweiXu():
 
 
     # Check the segments selected (by the function called CutVideoIntoSegments) whether have cut
-    def CheckSegments(self, CandidateSegments):
+    def CheckSegments(self, CandidateSegments, HardCutTruth, GradualTruth):
 
         import numpy as np
-
-        # It save the cut missed
-        MissCutTruth = []
-        # It save the gradual missed
+        MissHard = []
         MissGra = []
-
-        with open(self.GroundTruth_path, 'r') as f:
-            GroundTruth = f.readlines()
-
-        GroundTruth = [[int(i.strip().split('\t')[0]),int(i.strip().split('\t')[1])] for i in GroundTruth]
-
-        TransitionNumber = len(GroundTruth)
-
-        # It save the Hardcut Truth
-        HardCutTruth = []
-
-        # It save the Gradual Truth
-        GradualTruth  = []
-
-        GradualTransitionNumber = 0
-        HardTruthNumber = 0
-        for i in range(0, len(GroundTruth)-1):
-            if np.abs(GroundTruth[i][1] - GroundTruth[i+1][0]) != 1:
-                GradualTruth.append([GroundTruth[i][1], GroundTruth[i+1][0]])
-                GradualTransitionNumber += 1
-            else:
-                HardCutTruth.append([GroundTruth[i][1], GroundTruth[i+1][0]])
-                HardTruthNumber +=1
-
+        for i in range(len(HardCutTruth)):
             for j in range(len(CandidateSegments)):
-                if self.if_overlap(CandidateSegments[j][0], CandidateSegments[j][1], GroundTruth[i][1], GroundTruth[i+1][0]):
+                if CandidateSegments[j][1] < HardCutTruth[i][0]:
+                    continue
+                if self.if_overlap(CandidateSegments[j][0], CandidateSegments[j][1], HardCutTruth[i][0],
+                                   HardCutTruth[i][1]):
                     break
-                if self.if_overlap(CandidateSegments[j][0], CandidateSegments[j][1], GroundTruth[i][1], GroundTruth[i+1][0]) is False and j==len(CandidateSegments)-1:
-                    if np.abs(GroundTruth[i][1] - GroundTruth[i+1][0]) != 1:
-                        MissGra.append([GroundTruth[i][1],GroundTruth[i+1][0]])
-                    else:
-                        MissCutTruth.append([GroundTruth[i][1],GroundTruth[i+1][0]])
+                if CandidateSegments[j][0] > HardCutTruth[i][1]:
+                    MissHard.append(HardCutTruth[i])
                     break
 
-        print 'Hard Rate is ', (HardTruthNumber - len(MissCutTruth))/float(HardTruthNumber)
-        print 'Gra Rate is ', (GradualTransitionNumber - len(MissGra))/float(GradualTransitionNumber)
-                # if GroundTruth[i][1] >= CandidateSegments[j][0] and GroundTruth[i+1][0] <= CandidateSegments[j][1]:
-                #     break
-                # elif GroundTruth[i][1] < CandidateSegments[j][0]:
-                #     if np.abs(GroundTruth[i][1] - GroundTruth[i + 1][0]) != 1:
-                #         MissGra.append([GroundTruth[i][1],GroundTruth[i+1][0]])
-                #     else:
-                #         MissCutTruth.append([GroundTruth[i][1],GroundTruth[i+1][0]])
+        for i in range(len(GradualTruth)):
+            for j in range(len(CandidateSegments)):
+                if CandidateSegments[j][1] < GradualTruth[i][0]:
+                    continue
+                if self.if_overlap(CandidateSegments[j][0], CandidateSegments[j][1], GradualTruth[i][0],
+                                   GradualTruth[i][1]):
+                    break
+                if CandidateSegments[j][0] > GradualTruth[i][1]:
+                    MissGra.append(GradualTruth[i])
+                    break
 
-                    # print 'This cut "', GroundTruth[i][1],',', GroundTruth[i+1][0],'"can not be detected'
-                    # break
-        return [HardCutTruth, GradualTruth]
+        print "MissHard No. is ", len(MissHard)
+        print "MissGra No. is ", len(MissGra)
+        if len(HardCutTruth)>0:
+            print 'Hard Rate is ', (len(HardCutTruth) - len(MissHard)) / float(len(HardCutTruth))
+        if len(GradualTruth)>0:
+            print 'Gra Rate is ', (len(GradualTruth) - len(MissGra)) / float(len(GradualTruth))
 
-
-
+        return [MissHard, MissGra]
 
 
     def CTDetectionBaseOnHist(self):
@@ -732,12 +716,62 @@ class JingweiXu():
             # plt.plot(x, D1Sequence)
             #
             # plt.show()
+    def GetLabels(self, LabelTXT):
+        HardTruth = []
+        GraTruth = []
+        with open(LabelTXT) as f:
+            AllLines = f.readlines()
+        GroundTruth = [[int(AllLines[0].strip().split('\t')[-1])]]
+        for i in range(1, len(AllLines)-1):
+            GroundTruth[-1].extend([int(AllLines[i].strip().split('\t')[0])])
+            GroundTruth.append([int(AllLines[i].strip().split('\t')[1])])
+        GroundTruth[-1].extend([int(AllLines[-1].strip().split('\t')[0])])
 
+        for i in GroundTruth:
+            if i[1]-i[0] == 1:
+                HardTruth.append(i)
+            else:
+                GraTruth.append(i)
 
+        return [HardTruth, GraTruth]
+
+    def DetectionOnRAIData(self):
+        RAIDatasetPath = 'E:\\Meisa_SiameseNetwork\\RAIDataset\\videos\\'
+        LabelFilePath = 'E:\\Meisa_SiameseNetwork\\RAIDataset\\'
+
+        RAIDatasetPath = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/'
+        LabelFilePath = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/'
+        from glob import glob
+
+        AllLabels = glob(LabelFilePath + 'gt_*.txt')
+        AllVideos = glob(RAIDatasetPath + '*.mp4')
+
+        AllHard = 0
+        AllGra = 0
+        AllMissHard = 0
+        AllMissGra = 0
+        AllCandidateSegments = 0
+        for i in range(len(AllLabels)):
+            [HardTruth, GraTruth] = self.GetLabels(AllLabels[i])
+
+            AllHard += len(HardTruth)
+            AllGra += len(GraTruth)
+
+            CandidateSegments = self.CutVideoIntoSegmentsBaseOnNeuralNet(AllVideos[i])
+            [MissHard, MissGra] = self.CheckSegments(CandidateSegments, HardTruth, GraTruth)
+
+            AllMissHard += len(MissHard)
+            AllMissGra += len(MissGra)
+            AllCandidateSegments += len(CandidateSegments)
+
+            print 'Now the No. of Candidate Segments is', AllCandidateSegments
+            print 'Now the recall of hard is', (AllHard - AllMissHard) / float(AllHard)
+            print 'Now the recall of gra is', (AllGra - AllMissGra) / float(AllGra)
 if __name__ == '__main__':
     test1 = JingweiXu()
     # test1.CTDetection()
     # test1.CutVideoIntoSegments()
 
-    test1.CTDetectionBaseOnHist()
+    # test1.CTDetectionBaseOnHist()
+    test1.DetectionOnRAIData()
     # test1.CheckSegments(test1.CutVideoIntoSegmentsBaseOnNeuralNet())
