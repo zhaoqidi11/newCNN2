@@ -1,4 +1,4 @@
-class JingweiXu():
+class ClipShots_GenerateTrainingDataset():
 
 
     def get_vector(self, segments):
@@ -221,7 +221,7 @@ class JingweiXu():
                             break
                         j += 1
         return CandidateSegment
-        #print 'a'
+
 
     def CutVideoIntoSegmentsBaseOnNeuralNet(self, Video_path):
         import math
@@ -258,7 +258,7 @@ class JingweiXu():
         # transformer.set_channel_swap('data', (2, 1, 0))
 
         # It save the batch size
-        BatchSize = 100
+        BatchSize = 200
         net.blobs['data'].reshape(BatchSize,
                                   3,
                                   227, 227)
@@ -342,14 +342,14 @@ class JingweiXu():
         CandidateSegment = []
         for i in range(GroupNumber):
 
-
-            if i*GroupLength>=14100:
-                print "a"
+            #
+            # if i*GroupLength>=14100:
+            #     print "a"
             MIUL = np.mean(d[GroupLength*i:GroupLength*i+GroupLength])
             SigmaL = np.std(d[GroupLength*i:GroupLength*i+GroupLength])
 
-            Tl.append(MIUL + a * ( 1 + math.log( MIUG / MIUL ) ) * SigmaL)
-            # Tl.append(1.1 * MIUL + 0.6 * (MIUG / MIUL) * SigmaL)
+            # Tl.append(MIUL + a * ( 1 + math.log( MIUG / MIUL ) ) * SigmaL)
+            Tl.append(1.1 * MIUL + 0.6 * (MIUG/MIUL) * SigmaL)
             for j in range(GroupLength):
                 if i*GroupLength + j >= len(d):
                     break
@@ -472,7 +472,8 @@ class JingweiXu():
 
         return [MissHard, MissGra]
 
-    def CTDetectionBaseOnHist(self, VideoPath, HardCutTruth, GradualTruth):
+
+    def CTDetectionBaseOnHist(self, VideoPath, HardCutTruth, GradualTruth, videoname):
         import numpy as np
         import cv2
         import math
@@ -571,64 +572,50 @@ class JingweiXu():
                     if MAXValue > -1:
                         Answer.append(
                             ([CandidateSegments[i][0] + CandidatePeak, CandidateSegments[i][0] + CandidatePeak + 1]))
-                        # if MAXValue>20 and len([_ for _ in HistDifference if _<0.1])==len(HistDifference)-1 and (np.argmax(HistDifference)!=0 and np.argmax(HistDifference)!=len(HistDifference)-1):
-                        #     AbsoluteCut.append([CandidateSegments[i][0]+CandidatePeak, CandidateSegments[i][0]+CandidatePeak+1])
-                        # print a
-                else:
-                    for k1 in HardCutTruth:
-                        if self.if_overlap(CandidateSegments[i][0], CandidateSegments[i][1], k1[0], k1[1]) and \
-                                Answer[-1] != k1:
-                            print "cut", k1, "missed"
 
-            else:
-                for k2 in HardCutTruth:
-                    if self.if_overlap(CandidateSegments[i][0], CandidateSegments[i][1], k2[0], k2[1]) and len(
-                            Answer) > 0 and Answer[-1] != k2:
-                        print 'This cut has been missed : ', k2
 
-            #     Answer.append([CandidateSegments[i][0]+np.argmax(HistDifference), CandidateSegments[i][0]+np.argmax(HistDifference)+1])
-            # elif np.max(HistDifference) > 0.5 and len([_ for _ in HistDifference if _ >0.5]) == 1 and (np.max(HistDifference)/np.max([_ for _ in HistDifference if _ <=0.5]))>=10 :
-            #     Answer.append([CandidateSegments[i][0]+np.argmax(HistDifference), CandidateSegments[i][0]+np.argmax(HistDifference)+1])
-            # elif np.max(HistDifference) > 0.5 and len([_ for _ in HistDifference if _ >0.5]) == 2 and (np.max(HistDifference)/np.min([_ for _ in HistDifference if _ >0.5])) >10:
-            #     Answer.append([CandidateSegments[i][0]+np.argmax(HistDifference), CandidateSegments[i][0]+np.argmax(HistDifference)+1])
 
-            # if Answer[-1] == [1589, 1590]:
-            #     print 'a'
-            if len(Answer) > 0 and len(Answer) > AnswerLength:
-                AnswerLength += 1
-                if Answer[-1] not in HardCutTruth:
-                    print 'This a false cut'
-                # Flag = False
-                # for k in HardCutTruth:
-                #     Flag = self.if_overlap(Answer[-1][0], Answer[-1][1], k[0], k[1])
-                #     if Flag:
-                #         break
-                # if Flag is False:
-                #     print 'This is a false cut: ', Answer[-1]
-
-        # Miss = 0
-        # True_ = 0
-        # False_ = 0
-
-        # AbsoluteFalse = 0
-        # for i in Answer:
-        #     if i not in HardCutTruth:
-        #         print 'False :', i, '\n'
-        #         False_ = False_ + 1
-        #     else:
-        #         True_ = True_ + 1
-        #
-        # for i in HardCutTruth:
-        #     if i not in Answer:
-        #         Miss = Miss + 1
-        #
-        # print 'False No. is', False_, '\n'
-        # print 'True No. is', True_, '\n'
-        # print 'Miss No. is', Miss, '\n'
-        # # print 'The false(MaxValue>20) No. is', AbsoluteFalse
-        # return [True_, False_, Miss]
         [cut_correct, gradual_correct, all_correct] =self.eval(Answer, HardCutTruth)
-        print self.recall_pre_f1(cut_correct, len(HardCutTruth), len(Answer))
+
+        TrainingDatasetPath = 'D:\\ClipShots\\TrainingDatesetForSiameseNetwork\\Images\\'
+        TrainingLabelsLeft = 'D:\\ClipShots\\TrainingDatesetForSiameseNetwork\\LabelsLeft.txt'
+        TrainingLabelsRight = 'D:\\ClipShots\\TrainingDatesetForSiameseNetwork\\LabelsRight.txt'
+
+        TrainingDatasetPath = '/media/user02/New Volume/ClipShots/TrainingDataset/ImagesNotLabels/'
+        TrainingLabelsLeft = '/media/user02/New Volume/ClipShots/TrainingDataset/VideoNotLabelsLeft.txt'
+        TrainingLabelsRight = '/media/user02/New Volume/ClipShots/TrainingDataset/VideoNotLabelsRight.txt'
+
+        if len(HardCutTruth)>=0:
+            for i in range(len(Answer)):
+                    iminus = 0
+                    iadd = 0
+                    i_Video.set(1, Answer[i][0])
+                    ret1_, frame1_ = i_Video.read()
+                    while ret1_ is False:
+                        iminus += 1
+                        i_Video.set(1, Answer[i][0]-iminus)
+                        ret1_, frame1_ = i_Video.read()
+                    cv2.imwrite(TrainingDatasetPath + videoname + '_' + str(Answer[i][0]-iminus) +'.jpg', frame1_)
+
+                    i_Video.set(1, Answer[i][1])
+                    ret2_, frame2_ = i_Video.read()
+                    while ret2_ is False:
+                        iadd += 1
+                        i_Video.set(1, Answer[i][0]+iadd)
+                        ret2_, frame2_ = i_Video.read()
+                    cv2.imwrite(TrainingDatasetPath + videoname + '_' + str(Answer[i][1]+iadd) +'.jpg', frame2_)
+
+                    if Answer[i] in HardCutTruth:
+                        with open(TrainingLabelsLeft, 'a') as f:
+                            f.write(TrainingDatasetPath + videoname + '_' + str(Answer[i][0]-iminus) +'.jpg 0\n')
+                        with open(TrainingLabelsRight, 'a') as f:
+                            f.write(TrainingDatasetPath + videoname + '_' + str(Answer[i][1]+iadd) +'.jpg 0\n')
+                    else:
+                        with open(TrainingLabelsLeft, 'a') as f:
+                            f.write(TrainingDatasetPath + videoname + '_' + str(Answer[i][0] - iminus) + '.jpg 1\n')
+                        with open(TrainingLabelsRight, 'a') as f:
+                            f.write(TrainingDatasetPath + videoname + '_' + str(Answer[i][1] + iadd) + '.jpg 1\n')
+
         return len(HardCutTruth)-cut_correct
 
     # CT Detection base on CNN
@@ -678,90 +665,84 @@ class JingweiXu():
                     #if np.max(D1Sequence)- np.min(D1Sequence) > Tc:
                         #print np.argmin(D1Sequence)
 
-        # Miss = 0
-        # True = 0
-        # False = 0
-        # for i in Answer:
-        #     if i not in HardCutTruth:
-        #         print 'False :', i, '\n'
-        #         False = False + 1
-        #     else:
-        #         True = True + 1
-        #
-        # for i in HardCutTruth:
-        #     if i not in Answer:
-        #         Miss = Miss + 1
-        #
-        # print 'False No. is', False,'\n'
-        # print 'True No. is', True, '\n'
-        # print 'Miss No. is', Miss, '\n'
+
+        Miss = 0
+        True = 0
+        False = 0
+        for i in Answer:
+            if i not in HardCutTruth:
+                print 'False :', i, '\n'
+                False = False + 1
+            else:
+                True = True + 1
+
+        for i in HardCutTruth:
+            if i not in Answer:
+                Miss = Miss + 1
+
+        print 'False No. is', False,'\n'
+        print 'True No. is', True, '\n'
+        print 'Miss No. is', Miss, '\n'
 
         [cut_correct, gradual_correct, all_correct] =self.eval(Answer, HardCutTruth)
         print self.recall_pre_f1(cut_correct, len(HardCutTruth), len(Answer))
-        return len(HardCutTruth)-cut_correct
-            # # plot the image
-            #
-            # x = range(len(D1Sequence))
-            #
-            # plt.figure()
-            # plt.plot(x, D1Sequence)
-            #
-            # plt.show()
 
-    def GetLabels(self, LabelTXT):
-        HardTruth = []
-        GraTruth = []
-        with open(LabelTXT) as f:
-            AllLines = f.readlines()
-        GroundTruth = [[int(AllLines[0].strip().split('\t')[-1])]]
-        for i in range(1, len(AllLines)-1):
-            GroundTruth[-1].extend([int(AllLines[i].strip().split('\t')[0])])
-            GroundTruth.append([int(AllLines[i].strip().split('\t')[1])])
-        GroundTruth[-1].extend([int(AllLines[-1].strip().split('\t')[0])])
 
-        for i in GroundTruth:
-            if i[1]-i[0] == 1:
-                HardTruth.append(i)
-            else:
-                GraTruth.append(i)
+    def DetectionOnClipShots(self):
+        import json
 
-        return [HardTruth, GraTruth]
+        LabelFilePath = 'D:\\ClipShots\\ClipShots\\ClipShots\\annotations\\train.json'
+        VideoPath = 'D:\\ClipShots\\ClipShots\\ClipShots\\videos\\train\\'
+        VideoListPath = 'D:\\ClipShots\\TrainingDatesetForSiameseNetwork\\VideoList.txt'
 
-    def DetectionOnRAIData(self):
-        RAIDatasetPath = 'E:\\Meisa_SiameseNetwork\\RAIDataset\\videos\\'
-        LabelFilePath = 'E:\\Meisa_SiameseNetwork\\RAIDataset\\'
-
-        RAIDatasetPath = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/'
-        LabelFilePath = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/'
-        from glob import glob
-
-        AllLabels = glob(LabelFilePath + 'gt_*.txt')
-        AllVideos = glob(RAIDatasetPath + '*.mp4')
+        LabelFilePath = '/media/user02/New Volume/ClipShots/ClipShots/annotations/train.json'
+        VideoPath = '/media/user02/New Volume/ClipShots/ClipShots/videos/train/'
+        VideoListPath = '/media/user02/New Volume/ClipShots/TrainingDataset/VideosList_NotLabels_2_Record.txt'
+        WillBeExtractVideoListPath = '/media/user02/New Volume/ClipShots/TrainingDataset/VideosList_NotLabels_2.txt'
 
         AllHard = 0
-        AllGra = 0
-        AllMissHard = 0
-        AllMissGra = 0
-        AllCandidateSegments = 0
-        for i in range(len(AllLabels)):
-            [HardTruth, GraTruth] = self.GetLabels(AllLabels[i])
+        AllMiss = 0
 
+        with open(WillBeExtractVideoListPath) as f:
+            AllVideos=f.readlines()
+
+        for i in range(len(AllVideos)):
+            AllVideos[i] = AllVideos[i].strip()
+
+        annotations = json.load(open(LabelFilePath))
+
+        for videoname, labels in annotations.items():
+
+            if str(videoname) not in AllVideos:
+                continue
+
+            HardTruth = []
+            GraTruth = []
+            Labels = [i for i in labels['transitions']]
+            for i in Labels:
+                if i[1] - i[0] == 1:
+                    HardTruth.append(i)
+                else:
+                    GraTruth.append(i)
+
+            Miss = self.CTDetectionBaseOnHist(VideoPath + str(videoname), HardTruth, GraTruth, str(videoname))
             AllHard += len(HardTruth)
-            AllGra += len(GraTruth)
+            AllMiss += Miss
 
-            # CandidateSegments = self.CutVideoIntoSegmentsBaseOnNeuralNet(AllVideos[i])
-            # [MissHard, MissGra] = self.CheckSegments(CandidateSegments, HardTruth, GraTruth)
+            if len(HardTruth)>0 and float(Miss)/len(HardTruth)>0.3 and Miss >50:
+                print 'The missing rate is too high !'
+                print 'This video\'s name is ', str(videoname)
 
-            Miss = self.CTDetectionBaseOnHist(AllVideos[i], HardTruth, GraTruth)
-            AllMissHard += Miss
+            with open(VideoListPath, 'a') as f:
+                f.write(str(videoname)+'\n')
+            if AllHard > 0:
+                print 'Now the recall of hard is',  (AllHard - AllMiss) / float(AllHard)
 
-            print 'Now the recall of hard is', (AllHard - AllMissHard) / float(AllHard)
-            # print 'Now the recall of gra is', (AllGra - AllMissGra) / float(AllGra)
 if __name__ == '__main__':
-    test1 = JingweiXu()
+    test1 = ClipShots_GenerateTrainingDataset()
     # test1.CTDetection()
     # test1.CutVideoIntoSegments()
 
     # test1.CTDetectionBaseOnHist()
-    test1.DetectionOnRAIData()
+    test1.DetectionOnClipShots()
     # test1.CheckSegments(test1.CutVideoIntoSegmentsBaseOnNeuralNet())

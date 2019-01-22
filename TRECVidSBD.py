@@ -262,7 +262,7 @@ class JingweiXu():
     def CTDetectionBaseOnHist(self, VideoPath, HardCutTruth, GradualTruth):
         import numpy as np
         import cv2
-        import math
+        from glob import glob
 
         k = 0.4
         Tc = 0.05
@@ -271,67 +271,35 @@ class JingweiXu():
 
         CandidateSegments = self.CutVideoIntoSegmentsBaseOnNeuralNet(VideoPath)
 
-        self.CheckSegments(CandidateSegments, HardCutTruth, GradualTruth)
+        # self.CheckSegments(CandidateSegments, HardCutTruth, GradualTruth)
+
+        AllFramesInThisVideo = glob(VideoPath + '\\*.jpeg')
 
         # It saves the predicted shot boundaries
         Answer = []
 
-        # It saves the candidate segments which may have gradual
-        CandidateGra = []
+        ImageShape = cv2.imread(AllFramesInThisVideo[0]).shape
 
-        i_Video = cv2.VideoCapture(VideoPath)
-
-        # get width of this video
-        wid = int(i_Video.get(3))
-
-        # get height of this video
-        hei = int(i_Video.get(4))
-
-        # get the number of frames of this video
-        FrameNum = int(i_Video.get(7))
+        PixelsNoInFrame = ImageShape[0]*ImageShape[1]
 
         # It saves the predicted transition numbers
         AnswerLength = 0
 
         for i in range(len(CandidateSegments)):
-            frame1add = 0
-            frame2add = 0
-            # frame1 saves the first frame of the segment's
-            i_Video.set(1, CandidateSegments[i][0])
-            ret1, frame1 = i_Video.read()
 
-            # Consider the situation that the frame that would be not extracted
-            while frame1 is None:
-                frame1add += 1
-                i_Video.set(1, CandidateSegments[i][0] + frame1add)
-                ret1, frame1 = i_Video.read()
-
-            # frame2 saves the last frame of the segment's
-            i_Video.set(1, CandidateSegments[i][1])
-            ret1, frame2 = i_Video.read()
-
-            # Consider the situation that the frame that would be not extracted
-            while frame2 is None:
-                frame2add += 1
-                i_Video.set(1, CandidateSegments[i][1] - frame2add)
-                ret1, frame2 = i_Video.read()
+            frame1 = cv2.imread(AllFramesInThisVideo[CandidateSegments[i][0]])
+            frame2 = cv2.imread(AllFramesInThisVideo[CandidateSegments[i][1]])
 
             HistDifference = []
-
+            CandidateSegmentsHist = []
             # if CandidateSegments[i][0]>=14130:
             # print 'a'
-            if self.getHist_Manhattan(frame1, frame2, wid * hei) >= 0.45:
+            if self.getHist_Manhattan(frame1, frame2, PixelsNoInFrame) >= 0.45:
                 # Calculate the Manhattan distance from the frame1 and frame2 (Hist)
                 for j in range(CandidateSegments[i][0], CandidateSegments[i][1]):
-                    jadd1 = 0
-                    jadd2 = 0
-                    i_Video.set(1, j)
-                    ret1_, frame1_ = i_Video.read()
-
-                    i_Video.set(1, j + 1)
-                    ret2_, frame2_ = i_Video.read()
-
-                    HistDifference.append(self.getHist_chi_square(frame1_, frame2_, wid * hei))
+                    CandidateSegmentsHist.append(cv2.imread(AllFramesInThisVideo[j]))
+                for k in range(len(CandidateSegmentsHist)-1):
+                    HistDifference.append(self.getHist_chi_square(CandidateSegmentsHist[k], CandidateSegmentsHist[k+1], PixelsNoInFrame))
 
                 if np.max(HistDifference) > 0.1:  # and len([_ for _ in HistDifference if _>0.1])<len(HistDifference):
                     CandidatePeak = -1
@@ -393,26 +361,32 @@ class JingweiXu():
                 # if Flag is False:
                 #     print 'This is a false cut: ', Answer[-1]
 
-        Miss = 0
-        True_ = 0
-        False_ = 0
+        # Miss = 0
+        # True_ = 0
+        # False_ = 0
+        #
+        # # AbsoluteFalse = 0
+        # for i in Answer:
+        #     if i not in HardCutTruth:
+        #         print 'False :', i, '\n'
+        #         False_ = False_ + 1
+        #     else:
+        #         True_ = True_ + 1
+        #
+        # for i in HardCutTruth:
+        #     if i not in Answer:
+        #         Miss = Miss + 1
+        #
+        # print 'False No. is', False_, '\n'
+        # print 'True No. is', True_, '\n'
+        # print 'Miss No. is', Miss, '\n'
 
-        # AbsoluteFalse = 0
-        for i in Answer:
-            if i not in HardCutTruth:
-                print 'False :', i, '\n'
-                False_ = False_ + 1
-            else:
-                True_ = True_ + 1
 
-        for i in HardCutTruth:
-            if i not in Answer:
-                Miss = Miss + 1
-
-        print 'False No. is', False_, '\n'
-        print 'True No. is', True_, '\n'
-        print 'Miss No. is', Miss, '\n'
+        [cut_correct, gradual_correct, all_correct] =self.eval(Answer, HardCutTruth)
+        print self.recall_pre_f1(cut_correct, len(HardCutTruth), len(Answer))
+        return len(HardCutTruth)-cut_correct
         # print 'The false(MaxValue>20) No. is', AbsoluteFalse
+
 
     def GetLabels(self, xmlfile):
 
@@ -450,15 +424,17 @@ class JingweiXu():
             AllHard += len(HardTruth)
             AllGra += len(GraTruth)
             # self.CTDetectionBaseOnHist(AllFolders[i], HardTruth, GraTruth)
-            CandidateSegments = self.CutVideoIntoSegmentsBaseOnNeuralNet(AllFolders[i])
-            [MissHard, MissGra] = self.CheckSegments(CandidateSegments, HardTruth, GraTruth)
+            # CandidateSegments = self.CutVideoIntoSegmentsBaseOnNeuralNet(AllFolders[i])
+            # [MissHard, MissGra] = self.CheckSegments(CandidateSegments, HardTruth, GraTruth)
 
-            AllMissHard += len(MissHard)
-            AllMissGra += len(MissGra)
-            AllCandidateSegments += len(CandidateSegments)
-            print 'Now the No. of Candidate Segments is', AllCandidateSegments
+            MissHard = self.CTDetectionBaseOnHist(AllFolders[i], HardTruth, GraTruth)
+            AllMissHard += MissHard
+
+
+
+
             print 'Now the recall of hard is', (AllHard - AllMissHard) / float(AllHard)
-            print 'Now the recall of gra is', (AllGra - AllMissGra) / float(AllGra)
+
         print 'a'
 
 

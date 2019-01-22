@@ -1,4 +1,4 @@
-class JingweiXu():
+class ClipShots():
 
 
     def get_vector(self, segments):
@@ -258,7 +258,7 @@ class JingweiXu():
         # transformer.set_channel_swap('data', (2, 1, 0))
 
         # It save the batch size
-        BatchSize = 100
+        BatchSize = 200
         net.blobs['data'].reshape(BatchSize,
                                   3,
                                   227, 227)
@@ -348,8 +348,8 @@ class JingweiXu():
             MIUL = np.mean(d[GroupLength*i:GroupLength*i+GroupLength])
             SigmaL = np.std(d[GroupLength*i:GroupLength*i+GroupLength])
 
-            Tl.append(MIUL + a * ( 1 + math.log( MIUG / MIUL ) ) * SigmaL)
-            # Tl.append(1.1 * MIUL + 0.6 * (MIUG / MIUL) * SigmaL)
+            # Tl.append(MIUL + a * ( 1 + math.log( MIUG / MIUL ) ) * SigmaL)
+            Tl.append(1.1 * MIUL + 0.6 * (MIUG/MIUL) * SigmaL)
             for j in range(GroupLength):
                 if i*GroupLength + j >= len(d):
                     break
@@ -472,6 +472,7 @@ class JingweiXu():
 
         return [MissHard, MissGra]
 
+
     def CTDetectionBaseOnHist(self, VideoPath, HardCutTruth, GradualTruth):
         import numpy as np
         import cv2
@@ -574,17 +575,17 @@ class JingweiXu():
                         # if MAXValue>20 and len([_ for _ in HistDifference if _<0.1])==len(HistDifference)-1 and (np.argmax(HistDifference)!=0 and np.argmax(HistDifference)!=len(HistDifference)-1):
                         #     AbsoluteCut.append([CandidateSegments[i][0]+CandidatePeak, CandidateSegments[i][0]+CandidatePeak+1])
                         # print a
-                else:
-                    for k1 in HardCutTruth:
-                        if self.if_overlap(CandidateSegments[i][0], CandidateSegments[i][1], k1[0], k1[1]) and \
-                                Answer[-1] != k1:
-                            print "cut", k1, "missed"
-
-            else:
-                for k2 in HardCutTruth:
-                    if self.if_overlap(CandidateSegments[i][0], CandidateSegments[i][1], k2[0], k2[1]) and len(
-                            Answer) > 0 and Answer[-1] != k2:
-                        print 'This cut has been missed : ', k2
+            #     else:
+            #         for k1 in HardCutTruth:
+            #             if self.if_overlap(CandidateSegments[i][0], CandidateSegments[i][1], k1[0], k1[1]) and \
+            #                     Answer[-1] != k1:
+            #                 print "cut", k1, "missed"
+            #
+            # else:
+            #     for k2 in HardCutTruth:
+            #         if self.if_overlap(CandidateSegments[i][0], CandidateSegments[i][1], k2[0], k2[1]) and len(
+            #                 Answer) > 0 and Answer[-1] != k2:
+            #             print 'This cut has been missed : ', k2
 
             #     Answer.append([CandidateSegments[i][0]+np.argmax(HistDifference), CandidateSegments[i][0]+np.argmax(HistDifference)+1])
             # elif np.max(HistDifference) > 0.5 and len([_ for _ in HistDifference if _ >0.5]) == 1 and (np.max(HistDifference)/np.max([_ for _ in HistDifference if _ <=0.5]))>=10 :
@@ -628,7 +629,8 @@ class JingweiXu():
         # # print 'The false(MaxValue>20) No. is', AbsoluteFalse
         # return [True_, False_, Miss]
         [cut_correct, gradual_correct, all_correct] =self.eval(Answer, HardCutTruth)
-        print self.recall_pre_f1(cut_correct, len(HardCutTruth), len(Answer))
+        if len(HardCutTruth)>0 and cut_correct>0:
+            print self.recall_pre_f1(cut_correct, len(HardCutTruth), len(Answer))
         return len(HardCutTruth)-cut_correct
 
     # CT Detection base on CNN
@@ -678,27 +680,27 @@ class JingweiXu():
                     #if np.max(D1Sequence)- np.min(D1Sequence) > Tc:
                         #print np.argmin(D1Sequence)
 
-        # Miss = 0
-        # True = 0
-        # False = 0
-        # for i in Answer:
-        #     if i not in HardCutTruth:
-        #         print 'False :', i, '\n'
-        #         False = False + 1
-        #     else:
-        #         True = True + 1
-        #
-        # for i in HardCutTruth:
-        #     if i not in Answer:
-        #         Miss = Miss + 1
-        #
-        # print 'False No. is', False,'\n'
-        # print 'True No. is', True, '\n'
-        # print 'Miss No. is', Miss, '\n'
+
+        Miss = 0
+        True = 0
+        False = 0
+        for i in Answer:
+            if i not in HardCutTruth:
+                print 'False :', i, '\n'
+                False = False + 1
+            else:
+                True = True + 1
+
+        for i in HardCutTruth:
+            if i not in Answer:
+                Miss = Miss + 1
+
+        print 'False No. is', False,'\n'
+        print 'True No. is', True, '\n'
+        print 'Miss No. is', Miss, '\n'
 
         [cut_correct, gradual_correct, all_correct] =self.eval(Answer, HardCutTruth)
         print self.recall_pre_f1(cut_correct, len(HardCutTruth), len(Answer))
-        return len(HardCutTruth)-cut_correct
             # # plot the image
             #
             # x = range(len(D1Sequence))
@@ -708,60 +710,46 @@ class JingweiXu():
             #
             # plt.show()
 
-    def GetLabels(self, LabelTXT):
-        HardTruth = []
-        GraTruth = []
-        with open(LabelTXT) as f:
-            AllLines = f.readlines()
-        GroundTruth = [[int(AllLines[0].strip().split('\t')[-1])]]
-        for i in range(1, len(AllLines)-1):
-            GroundTruth[-1].extend([int(AllLines[i].strip().split('\t')[0])])
-            GroundTruth.append([int(AllLines[i].strip().split('\t')[1])])
-        GroundTruth[-1].extend([int(AllLines[-1].strip().split('\t')[0])])
+    def DetectionOnClipShots(self):
+        import json
 
-        for i in GroundTruth:
-            if i[1]-i[0] == 1:
-                HardTruth.append(i)
-            else:
-                GraTruth.append(i)
+        LabelFilePath = 'D:\\ClipShots\\ClipShots\\ClipShots\\annotations\\test.json'
+        VideoPath = 'D:\\ClipShots\\ClipShots\\ClipShots\\videos\\test\\'
 
-        return [HardTruth, GraTruth]
 
-    def DetectionOnRAIData(self):
-        RAIDatasetPath = 'E:\\Meisa_SiameseNetwork\\RAIDataset\\videos\\'
-        LabelFilePath = 'E:\\Meisa_SiameseNetwork\\RAIDataset\\'
+        LabelFilePath = '/media/user02/New Volume/ClipShots/ClipShots/annotations/test.json'
+        VideoPath = '/media/user02/New Volume/ClipShots/ClipShots/videos/test/'
 
-        RAIDatasetPath = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/'
-        LabelFilePath = '/media/user02/New Volume/Meisa/ShotDetector/video_rai/'
-        from glob import glob
-
-        AllLabels = glob(LabelFilePath + 'gt_*.txt')
-        AllVideos = glob(RAIDatasetPath + '*.mp4')
-
+        # It save the number of missed hard cut
+        AllMiss = 0
         AllHard = 0
-        AllGra = 0
-        AllMissHard = 0
-        AllMissGra = 0
-        AllCandidateSegments = 0
-        for i in range(len(AllLabels)):
-            [HardTruth, GraTruth] = self.GetLabels(AllLabels[i])
+        annotations = json.load(open(LabelFilePath))
+        for videoname, labels in annotations.items():
+            HardTruth = []
+            GraTruth = []
 
+            Labels = [i for i in labels['transitions']]
+            for i in Labels:
+                if i[1] - i[0] == 1:
+                    HardTruth.append(i)
+                else:
+                    GraTruth.append(i)
+
+            Miss = self.CTDetectionBaseOnHist(VideoPath + str(videoname), HardTruth, GraTruth)
             AllHard += len(HardTruth)
-            AllGra += len(GraTruth)
+            AllMiss += Miss
 
-            # CandidateSegments = self.CutVideoIntoSegmentsBaseOnNeuralNet(AllVideos[i])
-            # [MissHard, MissGra] = self.CheckSegments(CandidateSegments, HardTruth, GraTruth)
+            if len(HardTruth)>0 and float(Miss)/len(HardTruth)>0.3 and Miss >50:
+                print 'The missing rate is too high !'
+                print 'This video\'s name is ', str(videoname)
 
-            Miss = self.CTDetectionBaseOnHist(AllVideos[i], HardTruth, GraTruth)
-            AllMissHard += Miss
+            print 'Now the recall of hard is',  (AllHard - AllMiss) / float(AllHard)
 
-            print 'Now the recall of hard is', (AllHard - AllMissHard) / float(AllHard)
-            # print 'Now the recall of gra is', (AllGra - AllMissGra) / float(AllGra)
 if __name__ == '__main__':
-    test1 = JingweiXu()
+    test1 = ClipShots()
     # test1.CTDetection()
     # test1.CutVideoIntoSegments()
 
     # test1.CTDetectionBaseOnHist()
-    test1.DetectionOnRAIData()
+    test1.DetectionOnClipShots()
     # test1.CheckSegments(test1.CutVideoIntoSegmentsBaseOnNeuralNet())
