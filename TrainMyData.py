@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import caffe
+
 import sys
 import matplotlib.pyplot as plt
 import os
 
-caffe_root = '/data/caffe'
+caffe_root = '/media/user02/New Volume/caffe'
 sys.path.insert(0, caffe_root + '/python')
 # if you want to use cpu
 # caffe.set_mode_cpu()
-
+import caffe
+import os
 # Use gpu
 caffe.set_mode_gpu()
 caffe.set_device(0)
 
-
-weights = '/media/user02/New\ Volume/Meisa/hybricCNN/hybridCNN_iter_700000.caffemodel'
-SolverPath = '/media/user02/New\ Volume/solver.txt'
+os.chdir('/media/user02/New Volume/')
+weights = './Meisa/hybridCNN/hybridCNN_iter_700000.caffemodel'
+SolverPath = '/media/user02/New Volume/solver.prototxt'
 
 solver = caffe.get_solver(SolverPath)
 
