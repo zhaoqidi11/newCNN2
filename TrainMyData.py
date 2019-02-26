@@ -39,3 +39,4 @@ for it in range(niter):
     #        solver.test_nets[0].forward()
     #       test_loss[test_it] = solver.test_nets[0].blobs['loss'].data
     #    print '%s: test_loss=%.3f' % (it, np.mean(test_loss))
+
