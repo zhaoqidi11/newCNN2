@@ -31,6 +31,7 @@ testloss = np.zeros(10)
 
 for it in range(niter):
     solver.step(1)
+
     #loss[it]  = solver.net.blobs['loss'].data.copy()
     #print '%s: loss=%.3f' % (it, loss[it])
     #if it % disp_interval == 0 or it + 1 == niter:
