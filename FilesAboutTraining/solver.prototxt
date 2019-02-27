@@ -1,7 +1,7 @@
 net: "bn_new_Siamese_hybridCNN_deploy_new.prototxt"
 test_iter: 260
 test_interval: 1000
-base_lr: 0.001
+base_lr: 0.00001
 lr_policy: "step"
 gamma: 0.9
 stepsize: 1000
