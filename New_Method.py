@@ -80,7 +80,16 @@ class New_Method():
                     AllPixels))
                 FrameFirst = copy.deepcopy(FrameNext)
 
-            if np.max(d) - np.min(d) > 40 and len([k for k in d if k > 40]) == 1:
+            if np.max(d) - np.min(d) > 40 and len([k for k in d[np.argmax(d)-2:np.argmax(d)+3] if k>40])==1:
+                # i_Video.set(1, NewCandidateSegments[i][0]+np.argmax(d)-5)
+                # ret5_1, frame_5 = i_Video.read()
+                #
+                # i_Video.set(1, NewCandidateSegments[i][0]+np.argmax(d)+5)
+                # ret5_2, frame_5_2 = i_Video.read()
+                #
+                # if 0.5 * self.getHist_chi_square(frame_5, frame_5_2, AllPixels) + 0.5 * self.GetPixDiff(
+                #         cv2.cvtColor(frame_5, cv2.COLOR_BGR2GRAY), cv2.cvtColor(frame_5_2, cv2.COLOR_BGR2GRAY),
+                #         AllPixels)>40:
                 HardCut.append([NewCandidateSegments[i][0]+np.argmax(d), NewCandidateSegments[i][0]+np.argmax(d)+1])
         print "a"
 
@@ -241,7 +250,7 @@ class New_Method():
 
         VideosNumber = 10
 
-        for i in range(8, VideosNumber+1):
+        for i in range(10, VideosNumber+1):
             [HardTruth, GraTruth] = self.GetLabels(LabelFilePath + str(i) + '.txt')
             self.DetectHardCut(VideoPath + str(i) + '.mp4', self.GetCandidateSegments(VideoPath + str(i) + '.mp4', HardTruth, GraTruth))
 
