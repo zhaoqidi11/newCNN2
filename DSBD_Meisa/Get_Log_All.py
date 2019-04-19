@@ -41,7 +41,7 @@ for result in results1:
     train_iter_num.append(int(result[1]))
     train_loss.append(float(result[-1]))
 
-for result in results2:
+for result in (2results2:
     iter_num.append(int(result[-3]))
     test_loss.append(float(result[3]))
     test_ac.append(float(result[1]))
