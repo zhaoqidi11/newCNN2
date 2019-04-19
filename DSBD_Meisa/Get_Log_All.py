@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 import re
 
-with open('/media/user02/Volume/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/train_log6.log') as f:
+with open('/media/user02/Volume/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/train_log1To4.log') as f:
     data = f.read()
 
 # pattern = re.compile(r'''

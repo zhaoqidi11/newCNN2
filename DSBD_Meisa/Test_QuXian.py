@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import re
 import numpy as np
 
-with open('/media/user02/Volume/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/train_log9.log') as f:
+with open('/media/user02/Volume/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/train_log1To4.log') as f:
     data = f.read()
 
 # pattern = re.compile(r'''
@@ -50,7 +50,7 @@ for result in results2:
 average_test = []
 # Count = 73
 
-AllNum = 5
+AllNum = 10
 Count = len(test_loss) - AllNum
 for i in range(Count):
     average_test.append(np.average(test_loss[i:i+AllNum]))
