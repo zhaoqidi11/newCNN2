@@ -70,3 +70,81 @@ missed hard no. is  0 missed gra no. is  0
 hard Recall is 1.0 gra Recall is 1.0
 
 the cost of time is  110.135279894
+
+====================================
+
+group_length = 10
+second_group_length = 5
+
+Now 2.mp4  is analyasing...
+missed hard no. is  0 missed gra no. is  0
+
+hard Recall is 1.0 gra Recall is 1.0
+
+the cost of time is  196.106014967
+
+Now 8.mp4  is analyasing...
+missed hard no. is  2 missed gra no. is  0
+
+hard Recall is 0.988764044944 gra Recall is 1.0
+
+the cost of time is  133.799580097
+
+Now 5.mp4  is analyasing...
+missed hard no. is  0 missed gra no. is  0
+
+hard Recall is 1.0 gra Recall is 1.0
+
+the cost of time is  120.889345884
+
+Now 10.mp4  is analyasing...
+missed hard no. is  0 missed gra no. is  0
+
+hard Recall is 1.0 gra Recall is 1.0
+
+the cost of time is  106.348175049
+
+Now 3.mp4  is analyasing...
+missed hard no. is  0 missed gra no. is  0
+
+hard Recall is 1.0 gra Recall is 1.0
+
+the cost of time is  184.329421043
+
+Now 7.mp4  is analyasing...
+missed hard no. is  0 missed gra no. is  0
+
+hard Recall is 1.0 gra Recall is 1.0
+
+the cost of time is  141.09949708
+
+Now 9.mp4  is analyasing...
+missed hard no. is  0 missed gra no. is  0
+
+hard Recall is 1.0 gra Recall is 1.0
+
+the cost of time is  112.45036912
+
+Now 6.mp4  is analyasing...
+missed hard no. is  2 missed gra no. is  0
+
+hard Recall is 0.960784313725 gra Recall is 1.0
+
+the cost of time is  179.03124094
+
+Now 4.mp4  is analyasing...
+missed hard no. is  11 missed gra no. is  0
+
+hard Recall is 0.8625 gra Recall is 1.0
+
+the cost of time is  122.55228591
+
+Now 1.mp4  is analyasing...
+missed hard no. is  0 missed gra no. is  0
+
+hard Recall is 1.0 gra Recall is 1.0
+
+the cost of time is  176.172713041
+
+
+

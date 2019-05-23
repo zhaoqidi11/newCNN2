@@ -80,7 +80,6 @@ class SBD():
 
 
 
-
     def get_candadite_segments(self, VideoPath):
 
         group_length = 10
@@ -93,12 +92,12 @@ class SBD():
         # get height of this video
         hei = int(i_video.get(4))
         # It save the number of frames in this video
-        number_of_frames = int(i_video.get(7))
+        number_of_frames_in_video = int(i_video.get(7))
 
         # get the frame no. of one frame in this video (be used to normalize)
-        AllPixels = wid * hei
+        all_pixels = wid * hei
 
-        number_of_frames_in_group = int(math.ceil(number_of_frames / float(group_length)))
+        group_number = int(math.floor((number_of_frames_in_video-1) / float(group_length)))
 
         diff_group_10 = []
 
@@ -112,13 +111,13 @@ class SBD():
         # the diff between the 5 th and 15 th([5,15], [15,25], [25,35], ...) is larger than threshold
         candidate_segments_5 = []
 
-        for i in range(1, number_of_frames_in_group):
+        for i in range(1, group_number+1):
 
             i_video.set(1, i * group_length)
 
             ret_group_last_frame, group_last_frame = i_video.read()
 
-            d = self.get_hist_chi_squa_diff(group_last_frame, group_first_frame, AllPixels)
+            d = self.get_hist_chi_squa_diff(group_last_frame, group_first_frame, all_pixels)
 
             if d > 0.5:
 
@@ -128,10 +127,11 @@ class SBD():
 
             group_first_frame = copy.deepcopy(group_last_frame)
 
-        if number_of_frames % group_length == number_of_frames % second_group_length:
-            group_5_15_number = number_of_frames_in_group - 1
+        if number_of_frames_in_video % group_length > number_of_frames_in_video % second_group_length:
+
+            group_5_15_number = group_number - 1
         else:
-            group_5_15_number = number_of_frames_in_group
+            group_5_15_number = group_number
 
         i_video.set(1, second_group_length)
 
@@ -139,7 +139,7 @@ class SBD():
 
         for i in range(1, group_5_15_number):
 
-            if i * group_length + second_group_length >= number_of_frames:
+            if i * group_length + second_group_length >= number_of_frames_in_video:
 
                 break
 
@@ -147,7 +147,7 @@ class SBD():
 
             ret_group_last_frame, Frames10_5_2 = i_video.read()
 
-            d = self.get_hist_chi_squa_diff(first_frame_5_to_15, Frames10_5_2, AllPixels)
+            d = self.get_hist_chi_squa_diff(first_frame_5_to_15, Frames10_5_2, all_pixels)
 
             if d > 0.5:
 
