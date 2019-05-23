@@ -6,17 +6,16 @@ if __name__ == '__main__':
     import os
     import shutil
 
-    tv2007prefix = '/media/user02/Volume/TRECVid2007/'
-    OUTPUTtv2007prefix = '/media/user02/Volume/DSBD_Test/segments/'
+    tv2007prefix = '/home/t2007/t2007/'
+    OUTPUTtv2007prefix = '/home/DSBD_Test/segments/'
 
-    with open('/media/user02/Volume/DSBD/data/test_list.txt') as f:
+    with open('/home/new_test_list.txt') as f:
         AllTest = f.readlines()
 
     for i in AllTest:
-        if cmp(i.split('/')[5], 'tv2007') == 0:
-            os.makedirs(OUTPUTtv2007prefix + i.split('/')[-3] + '/' + i.split('/')[-2])
-            for j in range(16):
-                shutil.copyfile(
-                    tv2007prefix + i.split('/')[-3] + '/' + i.split('/')[-3] + '_' + str(int(i.split(' ')[-2]) - 1 + j).zfill(5) + '.jpeg',
-                    OUTPUTtv2007prefix + i.split('/')[-3] + '/' + i.split('/')[-2] + '/' + str(int(i.split(' ')[-2]) + j).zfill(6) + '.jpg'
-                )
+        os.makedirs(OUTPUTtv2007prefix + i.split('/')[-3] + '/' + i.split('/')[-2])
+        for j in range(16):
+            shutil.copyfile(
+                tv2007prefix + i.split('/')[-3] + '/' + i.split('/')[-3] + '_' + str(int(i.split(' ')[-2]) - 1 + j).zfill(5) + '.jpeg',
+                OUTPUTtv2007prefix + i.split('/')[-3] + '/' + i.split('/')[-2] + '/' + str(int(i.split(' ')[-2]) + j).zfill(6) + '.jpg'
+            )

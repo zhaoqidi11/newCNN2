@@ -2,7 +2,10 @@
 import matplotlib.pyplot as plt
 import re
 
-with open('/media/user02/Volume/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/train_log17.log') as f:
+# with open('/home/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/TrainLog26.log') as f:
+#     data = f.read()
+
+with open('/home/C3D/C3D-v1.1/dsbd/newTrainLogfromscratch13.log') as f:
     data = f.read()
 
 # pattern = re.compile(r'''
@@ -26,6 +29,7 @@ I0(.*?)solver.cpp:398]     Test net output #1: loss = (.*?) \((.*?)\)
 I0(.*?)solver.cpp:219] Iteration (.*?) \((.*?)\), loss = (.*?)
 ''')
 
+
 results1 = re.findall(pattern1, data)
 results2 = re.findall(pattern2, data)
 iter_num = []
@@ -46,10 +50,12 @@ for result in results2:
     test_loss.append(float(result[3]))
     test_ac.append(float(result[1]))
 
+
+
 plt.subplot(311)
-plt.plot(iter_num, test_loss)
+plt.plot(iter_num[1:], test_loss[1:])
 plt.subplot(312)
-plt.plot(iter_num, test_ac)
+plt.plot(iter_num[1:], test_ac[1:])
 plt.subplot(313)
 plt.plot(train_iter_num, train_loss)
 

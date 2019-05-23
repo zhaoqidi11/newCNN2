@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 import re
 import numpy as np
 
-with open('/media/user02/Volume/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/train_log1To4.log') as f:
-    data = f.read()
+# with open('/home/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/TrainLog26.log') as f:
+#     data = f.read()
 
+with open('/home/C3D/C3D-v1.1/dsbd/newTrainLogfromscratch4.log') as f:
+    data = f.read()
 # pattern = re.compile(r'''
 # I0(.*?)solver.cpp:238]     Train net output #1: loss = (.*?) \(\* 1 = (.*?) loss\)
 # I0(.*?)sgd_solver.cpp:105] Iteration (.*?), lr =
@@ -36,6 +38,7 @@ test_ac = []
 train_iter_num = []
 train_loss = []
 
+
 print(results2)
 
 for result in results1:
@@ -57,7 +60,26 @@ for i in range(Count):
 
 average_x_axis = range(Count)
 
-plt.plot(average_x_axis, average_test)
+
+average_train = []
+
+# train_num = 432
+train_num = 20
+train_count = len(train_loss) - train_num
+
+
+for i in range(train_count):
+    average_train.append(np.average(train_loss[i:i+train_num]))
+
+
+average_x_axis_train = range(train_count)
+
+plt.subplot(211)
+plt.plot(average_x_axis[2:], average_test[2:])
+
+plt.subplot(212)
+plt.plot(average_x_axis_train[-100:], average_train[-100:])
+
 
 # plt.subplot(311)
 # plt.plot(iter_num, test_loss)
