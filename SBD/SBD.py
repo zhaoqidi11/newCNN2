@@ -12,6 +12,7 @@ import math
 import copy
 import os
 import time
+import shutil
 
 class SBD():
 
@@ -78,12 +79,101 @@ class SBD():
 
         return [miss_h, miss_g]
 
+    def check_candidate_segments2(self, candidate_segments, hard_truth, gra_truth):
+
+        miss_hard = []
+        miss_gra = []
+
+        for i in range(len(hard_truth)):
+            for j in range(len(candidate_segments)):
+                if candidate_segments[j][1] < hard_truth[i][0]:
+                    continue
+                if self.if_overlap(candidate_segments[j][0], candidate_segments[j][1], hard_truth[i][0], hard_truth[i][1]):
+                    break
+                if candidate_segments[j][0] > hard_truth[i][1]:
+                    miss_hard.append(hard_truth[i])
+                    break
+
+        for i in range(len(gra_truth)):
+            for j in range(len(candidate_segments)):
+                if candidate_segments[j][1] < gra_truth[i][0]:
+                    continue
+                if self.if_overlap(candidate_segments[j][0], candidate_segments[j][1], gra_truth[i][0], gra_truth[i][1]):
+                    break
+                if candidate_segments[j][0] > gra_truth[i][1]:
+                    miss_gra.append(gra_truth[i])
+
+        return [len(miss_hard), len(miss_gra)]
 
 
-    def get_candadite_segments(self, VideoPath):
 
-        group_length = 10
-        second_group_length = 5
+    def generate_images_sequence(self, video_path, begin, length = 8, index, temp_foler_path):
+
+        os.chdir(temp_foler_path)
+
+        number = 3
+
+        i_video = cv2.VideoCapture(video_path)
+
+        for i in range(number):
+            # Create folders for every
+            if(os.path.exists(str(begin + i * length).zfill(6))):
+                continue
+            else:
+                os.mkdir(str(begin + i * length).zfill(6))
+
+            for j in range(begin + i * length, begin + (i+2) * length - 1):
+
+                # Notation: the index of .jpg is from 1 !!!
+                cv2.imwrite(os.sep.join([str(begin + i * length).zfill(6), '.'.join([str(j+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, j, 1))
+
+            cv2.imwrite(os.sep.join([str(begin + i * length).zfill(6), '.'.join([str(begin + (i+2) * length).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, begin+(i+2)*length-1, -1))
+
+            with open('./temp_list')
+
+
+    def get_candidate_segments_image(self, video_path, candidate_segments):
+
+        temp_folder_path = './tmp_video_images'
+
+        if os.path.exists(temp_folder_path):
+            shutil.rmtree(temp_folder_path)
+            os.mkdir(temp_folder_path)
+
+        os.chdir(temp_folder_path)
+
+        length = (candidate_segments[0][1] - candidate_segments[0][0]) / 2
+
+        for i in candidate_segments:
+
+            if i[0] - length < 0:
+                begin = 0
+                end = 0
+
+
+
+    def process_invalid_frame(self, ret, frame, index, sign, i_video):
+
+        temp_i = index + sign
+        while ret is False:
+            i_video.set(1, temp_i)
+            ret, frame = i_video.read()
+            temp_i += sign
+        return frame
+
+    def get_valid_frame(self, i_video, index, sign):
+        i_video.set(1, index)
+        ret, frame = i_video.read()
+        if ret:
+            return frame
+        else:
+            return self.process_invalid_frame(ret, frame, index, sign, i_video)
+
+    # Get candidate segments
+    def get_candidate_segments(self, VideoPath):
+
+        group_length = 16
+        second_group_length = 8
 
         i_video = cv2.VideoCapture(VideoPath)
 
@@ -103,8 +193,8 @@ class SBD():
 
         diff_group_5 = []
 
-        i_video.set(1, 0)
-        ret_group_first_frame, group_first_frame = i_video.read()
+        group_first_frame = self.get_valid_frame(i_video, 0, 1)
+
 
         # the diff between the 0 th and 10 th([0,10], [10,20], [20,30], ...) is larger than threshold
         candidate_segments_10 = []
@@ -113,9 +203,7 @@ class SBD():
 
         for i in range(1, group_number+1):
 
-            i_video.set(1, i * group_length)
-
-            ret_group_last_frame, group_last_frame = i_video.read()
+            group_last_frame = self.get_valid_frame(i_video, i*group_length, -1)
 
             d = self.get_hist_chi_squa_diff(group_last_frame, group_first_frame, all_pixels)
 
@@ -127,25 +215,23 @@ class SBD():
 
             group_first_frame = copy.deepcopy(group_last_frame)
 
+
+
         if number_of_frames_in_video % group_length > number_of_frames_in_video % second_group_length:
 
-            group_5_15_number = group_number - 1
-        else:
             group_5_15_number = group_number
+        else:
+            group_5_15_number = group_number - 1
 
-        i_video.set(1, second_group_length)
+        first_frame_5_to_15 = self.get_valid_frame(i_video, second_group_length, 1)
 
-        ret_group_first_frame, first_frame_5_to_15 = i_video.read()
-
-        for i in range(1, group_5_15_number):
+        for i in range(1, group_5_15_number+1):
 
             if i * group_length + second_group_length >= number_of_frames_in_video:
 
                 break
 
-            i_video.set(1, i * group_length + second_group_length)
-
-            ret_group_last_frame, Frames10_5_2 = i_video.read()
+            Frames10_5_2 = self.get_valid_frame(i_video, i*group_length + second_group_length, -1)
 
             d = self.get_hist_chi_squa_diff(first_frame_5_to_15, Frames10_5_2, all_pixels)
 
@@ -225,11 +311,11 @@ class SBD():
             begin_time = time.time()
 
 
-            all_candidate_segments = self.get_candadite_segments(i)
+            all_candidate_segments = self.get_candidate_segments(i)
 
             [hard_truth, gra_truth] = self.get_labels_rai('./annotations/gt_' + i.split('.')[0] + '.txt')
 
-            [missed_hard, missed_gra] = self.check_candidate_segments(all_candidate_segments, hard_truth, gra_truth)
+            [missed_hard, missed_gra] = self.check_candidate_segments2(all_candidate_segments, hard_truth, gra_truth)
 
             print 'missed hard no. is ', str(missed_hard), 'missed gra no. is ', str(missed_gra), '\n'
 
