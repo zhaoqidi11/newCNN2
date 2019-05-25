@@ -1,8 +1,10 @@
+# Generate the output folders
+
 import os
 
 if __name__ == '__main__':
 
-    output_prefix_path = '/home/CNN2/SBD/Test_DSBD/output.prefix'
+    output_prefix_path = '/home/CNN2/SBD/Test_DSBD/test.prefix'
 
     with open(output_prefix_path) as f:
 

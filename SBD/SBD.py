@@ -129,7 +129,13 @@ class SBD():
 
             cv2.imwrite(os.sep.join([str(begin + i * length).zfill(6), '.'.join([str(begin + (i+2) * length).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, begin+(i+2)*length-1, -1))
 
-            with open('./temp_list')
+        with open('./temp_list', 'a') as f:
+
+            f.write(os.sep.join([]))
+
+    def detect_hard(self,candidate_segments):
+
+
 
 
     def get_candidate_segments_image(self, video_path, candidate_segments):
