@@ -107,7 +107,7 @@ class SBD():
 
 
 
-    def generate_images_sequence(self, video_path, begin, length = 8, index, temp_foler_path):
+    def generate_images_sequence(self, video_path, begin, length, temp_folder_path, temp_out_folder_path, temp_folder_list_path, temp_out_folder_list_path):
 
         # begin is "the true index" of this video
 
@@ -115,8 +115,6 @@ class SBD():
         # because in C3D frame the index from 1!!!!
 
         save_index = begin + 1
-
-        os.chdir(temp_foler_path)
 
         number = 3
 
@@ -137,11 +135,27 @@ class SBD():
 
             cv2.imwrite(os.sep.join([str(save_index + i * length).zfill(6), '.'.join([str(begin + (i+2) * length).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, begin+(i+2)*length-1, -1))
 
-        temp_list = [os.sep.join([str(save_index + i * length).zfill(6), str(save_index + i * length).zfill(6)]) for i in range(number) + '\n']
+        os.chdir('../')
 
-        with open('./temp_list', 'a') as f:
+        temp_out_list = [os.sep.join([temp_out_folder_path, str(save_index + i * length).zfill(6), str(save_index + i * length).zfill(6)]) + '\n' for i in range(number)]
+
+        temp_list = [' '.join([os.sep.join([temp_folder_path, str(save_index + i * length).zfill(6), '']), str(save_index + i * length).zfill(6), '0']) + '\n' for i in range(number)]
+
+        all_candidate_list = [[begin + i*length, begin + (i+2)*length] for i in range(number)]
+
+        with open(temp_folder_list_path, 'a') as f:
+
+            f.writelines(temp_out_list)
+
+        with open(temp_out_folder_list_path, 'a') as f:
 
             f.writelines(temp_list)
+
+        return all_candidate_list
+
+
+
+
 
     def detect_hard(self,candidate_segments):
 
@@ -149,23 +163,51 @@ class SBD():
 
 
 
-    def get_candidate_segments_image(self, video_path, candidate_segments):
+    def get_candidate_segments_image(self, video_path, candidate_segments, number_of_frames_in_video):
 
         temp_folder_path = './tmp_video_images'
 
+        temp_out_folder = './tmp_out_video_images'
+
+        temp_folder_list_path = './temp_output_list.prefix'
+
+        temp_out_folder_list_path = './temp_list.list'
+
+        if os.path.exists(temp_folder_list_path):
+            os.remove(temp_folder_list_path)
+        if os.path.exists(temp_out_folder_list_path):
+            os.remove(temp_out_folder_list_path)
+
+
         if os.path.exists(temp_folder_path):
             shutil.rmtree(temp_folder_path)
+            os.mkdir(temp_folder_path)
+        else:
             os.mkdir(temp_folder_path)
 
         os.chdir(temp_folder_path)
 
         length = (candidate_segments[0][1] - candidate_segments[0][0]) / 2
 
+        all_candidate_list = []
+
         for i in candidate_segments:
 
             if i[0] - length < 0:
                 begin = 0
-                end = 0
+            elif i[1] + length >= number_of_frames_in_video:
+                begin = number_of_frames_in_video - length
+            else:
+                begin = i[0] - 8
+
+            all_candidate_list.extend(self.generate_images_sequence(video_path, begin, length, temp_folder_path, temp_out_folder, temp_folder_list_path, temp_out_folder_list_path))
+
+        return all_candidate_list
+
+
+    def detect_hard(self, candidate_segment, temp):
+        print 'a'
+
 
 
 
@@ -185,6 +227,8 @@ class SBD():
             return frame
         else:
             return self.process_invalid_frame(ret, frame, index, sign, i_video)
+
+
 
     # Get candidate segments
     def get_candidate_segments(self, VideoPath):
@@ -287,7 +331,11 @@ class SBD():
                 all_candidate_segments.extend(candidate_segments_10[i:])
                 break
 
-        return all_candidate_segments
+        return [all_candidate_segments, number_of_frames_in_video]
+
+
+
+
 
     def get_labels_rai(self, label_path):
 
@@ -314,29 +362,34 @@ class SBD():
 
     def sbd_on_rai(self):
 
-
         current_dir = os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]))
 
-        os.chdir('./videos')
+        path_to_video = 'videos'
 
-        videos = glob('*.mp4')
+        videos = glob(os.sep.join([path_to_video, '*.mp4']))
+
 
         for i in videos:
             # if cmp(i, '8.mp4') == -1:
             #     continue
-            print 'Now', i, ' is analyasing...'
+
+            print 'Now', i.split(os.sep)[-1], ' is analyasing...'
+
             begin_time = time.time()
 
 
-            all_candidate_segments = self.get_candidate_segments(i)
+            [all_candidate_segments, number_of_frames_in_video] = self.get_candidate_segments(i)
 
-            [hard_truth, gra_truth] = self.get_labels_rai('./annotations/gt_' + i.split('.')[0] + '.txt')
+            all_candidate_list = self.get_candidate_segments_image(os.sep.join([current_dir, i]), all_candidate_segments, number_of_frames_in_video)
 
-            [missed_hard, missed_gra] = self.check_candidate_segments2(all_candidate_segments, hard_truth, gra_truth)
+            # [hard_truth, gra_truth] = self.get_labels_rai('./annotations/gt_' + i.split('.')[0] + '.txt')
+            #
+            # [missed_hard, missed_gra] = self.check_candidate_segments2(all_candidate_segments, hard_truth, gra_truth)
+            #
+            # print 'missed hard no. is ', str(missed_hard), 'missed gra no. is ', str(missed_gra), '\n'
+            #
+            # print 'hard Recall is', str(float(len(hard_truth) - missed_hard) / len(hard_truth)), 'gra Recall is', str(float(len(gra_truth) - missed_gra) / len(gra_truth)), '\n'
 
-            print 'missed hard no. is ', str(missed_hard), 'missed gra no. is ', str(missed_gra), '\n'
-
-            print 'hard Recall is', str(float(len(hard_truth) - missed_hard) / len(hard_truth)), 'gra Recall is', str(float(len(gra_truth) - missed_gra) / len(gra_truth)), '\n'
             end_time = time.time()
 
             print 'the cost of time is ', str(end_time - begin_time), '\n'
