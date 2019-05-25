@@ -109,6 +109,13 @@ class SBD():
 
     def generate_images_sequence(self, video_path, begin, length = 8, index, temp_foler_path):
 
+        # begin is "the true index" of this video
+
+        # save_index is the saved index in this video
+        # because in C3D frame the index from 1!!!!
+
+        save_index = begin + 1
+
         os.chdir(temp_foler_path)
 
         number = 3
@@ -117,24 +124,28 @@ class SBD():
 
         for i in range(number):
             # Create folders for every
-            if(os.path.exists(str(begin + i * length).zfill(6))):
+            if(os.path.exists(str(save_index + i * length).zfill(6))):
                 continue
             else:
-                os.mkdir(str(begin + i * length).zfill(6))
+                os.mkdir(str(save_index + i * length).zfill(6))
 
             for j in range(begin + i * length, begin + (i+2) * length - 1):
 
                 # Notation: the index of .jpg is from 1 !!!
-                cv2.imwrite(os.sep.join([str(begin + i * length).zfill(6), '.'.join([str(j+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, j, 1))
+                # so j must become "j+1"!!!
+                cv2.imwrite(os.sep.join([str(save_index + i * length).zfill(6), '.'.join([str(j+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, j, 1))
 
-            cv2.imwrite(os.sep.join([str(begin + i * length).zfill(6), '.'.join([str(begin + (i+2) * length).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, begin+(i+2)*length-1, -1))
+            cv2.imwrite(os.sep.join([str(save_index + i * length).zfill(6), '.'.join([str(begin + (i+2) * length).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, begin+(i+2)*length-1, -1))
+
+        temp_list = [os.sep.join([str(save_index + i * length).zfill(6), str(save_index + i * length).zfill(6)]) for i in range(number) + '\n']
 
         with open('./temp_list', 'a') as f:
 
-            f.write(os.sep.join([]))
+            f.writelines(temp_list)
 
     def detect_hard(self,candidate_segments):
 
+        print "TODO"
 
 
 
