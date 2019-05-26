@@ -166,21 +166,25 @@ class SBD():
 
 
 
-    def generate_images_sequence(self, tmp_folder_path, video_path, unduplicated_segments):
+    def generate_images_sequence(self, tmp_folder_path, video_path, C3D_segments):
 
         i_video = cv2.VideoCapture(video_path)
 
-        for i in unduplicated_segments:
+        for i in C3D_segments:
 
             index = i[0]
 
+            save_path = os.sep.join([tmp_folder_path, str(index+1).zfill(6)])
+
+            os.mkdir(save_path)
+
             while index < i[1]-1:
 
-                cv2.imwrite(os.sep.join([tmp_folder_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, index, 1))
+                cv2.imwrite(os.sep.join([save_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, index, 1))
 
                 index += 1
 
-            cv2.imwrite(os.sep.join([tmp_folder_path, '.'.join([str(i[1]).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, i[1]-1, -1))
+            cv2.imwrite(os.sep.join([save_path, '.'.join([str(i[1]).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, i[1]-1, -1))
 
 
 
@@ -215,30 +219,6 @@ class SBD():
         return [[i, i+16] for i in sorted(C3D_segments_begin)]
 
 
-
-
-    def get_unduplicated_segments(self,C3D_segments):
-
-        unduplicated_segments = []
-
-        for i in C3D_segments:
-
-            if len(unduplicated_segments) > 0:
-
-                if self.if_overlap2(unduplicated_segments[-1][0], unduplicated_segments[-1][1], i[0], i[1]):
-
-                    unduplicated_segments[-1][1] = i[1]
-
-                else:
-                    unduplicated_segments.append(i)
-
-            else:
-
-                unduplicated_segments.append(i)
-
-        return unduplicated_segments
-
-
     def detect_hard(self,candidate_segments):
 
         print "TODO"
@@ -271,19 +251,15 @@ class SBD():
 
         C3D_segments = self.generate_candidate_segments_to_C3D(candidate_segments, number_of_frames_in_video, 3)
 
-        all_C3D_segments = copy.deepcopy(C3D_segments)
-
-        unduplicated_segments = self.get_unduplicated_segments(C3D_segments)
-
-        self.generate_images_sequence(temp_folder_path, video_path, unduplicated_segments)
+        self.generate_images_sequence(temp_folder_path, video_path, C3D_segments)
 
         temp_list = []
         temp_out_list = []
 
         for i in C3D_segments:
 
-            temp_list.append(' '.join([os.sep.join([temp_folder_path, '']), str(i[0]+1), '0']) + '\n')
-            temp_out_list.append(os.sep.join([temp_out_folder_path, str(i[0]+1).zfill(6)]) + '\n')
+            temp_list.append(' '.join([os.sep.join([temp_folder_path, str(i[0]+1).zfill(6), '']), str(i[0]+1), '0']) + '\n')
+            temp_out_list.append(os.sep.join([temp_out_folder_path, str(i[0]+1).zfill(6),str(i[0]+1).zfill(6)]) + '\n')
 
         with open(temp_folder_list_path, 'w') as f:
             f.writelines(temp_list)
@@ -291,7 +267,7 @@ class SBD():
         with open(temp_out_folder_list_path, 'w') as f:
             f.writelines(temp_out_list)
 
-        return all_C3D_segments
+        return C3D_segments
 
 
     def detect_hard(self, candidate_segment, temp):
@@ -457,8 +433,8 @@ class SBD():
 
 
         for i in videos:
-            # if cmp(i, '8.mp4') == -1:
-            #     continue
+            if cmp(i.split(os.sep)[-1], '1.mp4') != 0:
+                continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
 
