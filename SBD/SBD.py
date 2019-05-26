@@ -22,6 +22,14 @@ class SBD():
             begin1, end1, begin2, end2 = begin2, end2, begin1, end1
 
         return end1 >= begin2
+
+    def if_overlap2(self, begin1, end1, begin2, end2):
+
+        if begin1 > begin2:
+            begin1, end1, begin2, end2 = begin2, end2, begin1, end1
+
+        return end1 > begin2
+
     def get_frame_hist(self, frame, bins_number):
 
         B_frame_hist = cv2.calcHist([frame], channels=[0], mask=None, ranges=[0.0, 255.0], histSize=[bins_number])
@@ -102,107 +110,188 @@ class SBD():
                     break
                 if candidate_segments[j][0] > gra_truth[i][1]:
                     miss_gra.append(gra_truth[i])
+                    break
 
         return [len(miss_hard), len(miss_gra)]
 
+    def check_candidate_segments3(self, candidate_segments, hard_truth, gra_truth):
 
 
-    def generate_images_sequence(self, video_path, begin, length, temp_folder_path, temp_out_folder_path, temp_folder_list_path, temp_out_folder_list_path):
+       candidate_segments_label = []
 
-        # begin is "the true index" of this video
 
-        # save_index is the saved index in this video
-        # because in C3D frame the index from 1!!!!
+       for i in range(len(candidate_segments)):
 
-        save_index = begin + 1
+           for j in range(len(hard_truth)):
 
-        number = 3
+               if candidate_segments[i][0] > hard_truth[j][1] and j < len(hard_truth)-1:
+                   continue
+               elif self.if_overlap(candidate_segments[i][0], candidate_segments[i][1], hard_truth[j][0], hard_truth[j][1]):
+                   candidate_segments_label.append(2)
+                   break
+               elif candidate_segments[i][1] < hard_truth[j][0]:
+                   candidate_segments_label.append(0)
+                   break
+
+               if j == len(hard_truth)-1:
+                   candidate_segments_label.append(0)
+
+       for i in range(len(candidate_segments)):
+
+           for j in range(len(gra_truth)):
+
+               if candidate_segments[i][0] > gra_truth[j][1]:
+                   continue
+               elif self.if_overlap(candidate_segments[i][0], candidate_segments[i][1], gra_truth[j][0],
+                                    gra_truth[j][1]):
+                   candidate_segments_label[i] = 1
+                   break
+               elif candidate_segments[i][1] < gra_truth[j][0]:
+                   break
+
+
+
+       candidate_segments_label_save = [str(i)+'\n' for i in candidate_segments_label]
+
+       with open('./label.txt', 'w') as f:
+           f.writelines(candidate_segments_label_save)
+
+       return candidate_segments_label
+
+
+
+
+
+
+
+
+
+    def generate_images_sequence(self, tmp_folder_path, video_path, unduplicated_segments):
 
         i_video = cv2.VideoCapture(video_path)
 
-        for i in range(number):
-            # Create folders for every
-            if(os.path.exists(str(save_index + i * length).zfill(6))):
-                continue
+        for i in unduplicated_segments:
+
+            index = i[0]
+
+            while index < i[1]-1:
+
+                cv2.imwrite(os.sep.join([tmp_folder_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, index, 1))
+
+                index += 1
+
+            cv2.imwrite(os.sep.join([tmp_folder_path, '.'.join([str(i[1]).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, i[1]-1, -1))
+
+
+
+    def generate_candidate_segments_to_C3D(self, candidate_segments, num_of_frames_in_video, number):
+
+        length = (candidate_segments[0][1] - candidate_segments[0][0]) / 2
+
+        C3D_segments_begin = {}
+
+        for i in candidate_segments:
+
+            for j in range(-1,number-1):
+
+                if i[0] + j * length < 0:
+
+                    C3D_segments_begin[0] = 16
+                    C3D_segments_begin[8] = 24
+                    C3D_segments_begin[16] = 32
+                    break
+
+                elif i[1] + length > num_of_frames_in_video:
+
+                    C3D_segments_begin[num_of_frames_in_video-32] = num_of_frames_in_video -16
+                    C3D_segments_begin[num_of_frames_in_video-24] = num_of_frames_in_video - 8
+                    C3D_segments_begin[num_of_frames_in_video-16] = num_of_frames_in_video
+                    break
+                elif not C3D_segments_begin.has_key(i[0] + j*length):
+                    C3D_segments_begin[i[0] + j*length] = i[0] + (j+2)*length
+                else:
+                    continue
+
+        return [[i, i+16] for i in sorted(C3D_segments_begin)]
+
+
+
+
+    def get_unduplicated_segments(self,C3D_segments):
+
+        unduplicated_segments = []
+
+        for i in C3D_segments:
+
+            if len(unduplicated_segments) > 0:
+
+                if self.if_overlap2(unduplicated_segments[-1][0], unduplicated_segments[-1][1], i[0], i[1]):
+
+                    unduplicated_segments[-1][1] = i[1]
+
+                else:
+                    unduplicated_segments.append(i)
+
             else:
-                os.mkdir(str(save_index + i * length).zfill(6))
 
-            for j in range(begin + i * length, begin + (i+2) * length - 1):
+                unduplicated_segments.append(i)
 
-                # Notation: the index of .jpg is from 1 !!!
-                # so j must become "j+1"!!!
-                cv2.imwrite(os.sep.join([str(save_index + i * length).zfill(6), '.'.join([str(j+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, j, 1))
-
-            cv2.imwrite(os.sep.join([str(save_index + i * length).zfill(6), '.'.join([str(begin + (i+2) * length).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, begin+(i+2)*length-1, -1))
-
-        os.chdir('../')
-
-        temp_out_list = [os.sep.join([temp_out_folder_path, str(save_index + i * length).zfill(6), str(save_index + i * length).zfill(6)]) + '\n' for i in range(number)]
-
-        temp_list = [' '.join([os.sep.join([temp_folder_path, str(save_index + i * length).zfill(6), '']), str(save_index + i * length).zfill(6), '0']) + '\n' for i in range(number)]
-
-        all_candidate_list = [[begin + i*length, begin + (i+2)*length] for i in range(number)]
-
-        with open(temp_folder_list_path, 'a') as f:
-
-            f.writelines(temp_out_list)
-
-        with open(temp_out_folder_list_path, 'a') as f:
-
-            f.writelines(temp_list)
-
-        return all_candidate_list
-
-
-
+        return unduplicated_segments
 
 
     def detect_hard(self,candidate_segments):
 
         print "TODO"
 
+    def mkdir(self, path):
 
+        if os.path.exists(path):
+            shutil.rmtree(path)
+            os.mkdir(path)
+        else:
+            os.mkdir(path)
 
-    def get_candidate_segments_image(self, video_path, candidate_segments, number_of_frames_in_video):
+    def get_candidate_segments_image(self, current_dir, video_path, candidate_segments, number_of_frames_in_video):
 
-        temp_folder_path = './tmp_video_images'
+        temp_folder_path = os.sep.join([current_dir , 'tmp_video_images'])
 
-        temp_out_folder = './tmp_out_video_images'
+        temp_out_folder_path = os.sep.join([current_dir , 'tmp_out_video_images'])
 
-        temp_folder_list_path = './temp_output_list.prefix'
+        temp_folder_list_path = os.sep.join([current_dir , 'tmp_list.prefix'])
 
-        temp_out_folder_list_path = './temp_list.list'
+        temp_out_folder_list_path = os.sep.join([current_dir , 'tmp_output_list.list'])
+
+        self.mkdir(temp_folder_path)
+        self.mkdir(temp_out_folder_path)
 
         if os.path.exists(temp_folder_list_path):
             os.remove(temp_folder_list_path)
         if os.path.exists(temp_out_folder_list_path):
             os.remove(temp_out_folder_list_path)
 
+        C3D_segments = self.generate_candidate_segments_to_C3D(candidate_segments, number_of_frames_in_video, 3)
 
-        if os.path.exists(temp_folder_path):
-            shutil.rmtree(temp_folder_path)
-            os.mkdir(temp_folder_path)
-        else:
-            os.mkdir(temp_folder_path)
+        all_C3D_segments = copy.deepcopy(C3D_segments)
 
-        os.chdir(temp_folder_path)
+        unduplicated_segments = self.get_unduplicated_segments(C3D_segments)
 
-        length = (candidate_segments[0][1] - candidate_segments[0][0]) / 2
+        self.generate_images_sequence(temp_folder_path, video_path, unduplicated_segments)
 
-        all_candidate_list = []
+        temp_list = []
+        temp_out_list = []
 
-        for i in candidate_segments:
+        for i in C3D_segments:
 
-            if i[0] - length < 0:
-                begin = 0
-            elif i[1] + length >= number_of_frames_in_video:
-                begin = number_of_frames_in_video - length
-            else:
-                begin = i[0] - 8
+            temp_list.append(' '.join([os.sep.join([temp_folder_path, '']), str(i[0]+1), '0']) + '\n')
+            temp_out_list.append(os.sep.join([temp_out_folder_path, str(i[0]+1).zfill(6)]) + '\n')
 
-            all_candidate_list.extend(self.generate_images_sequence(video_path, begin, length, temp_folder_path, temp_out_folder, temp_folder_list_path, temp_out_folder_list_path))
+        with open(temp_folder_list_path, 'w') as f:
+            f.writelines(temp_list)
 
-        return all_candidate_list
+        with open(temp_out_folder_list_path, 'w') as f:
+            f.writelines(temp_out_list)
+
+        return all_C3D_segments
 
 
     def detect_hard(self, candidate_segment, temp):
@@ -227,8 +316,6 @@ class SBD():
             return frame
         else:
             return self.process_invalid_frame(ret, frame, index, sign, i_video)
-
-
 
     # Get candidate segments
     def get_candidate_segments(self, VideoPath):
@@ -380,9 +467,12 @@ class SBD():
 
             [all_candidate_segments, number_of_frames_in_video] = self.get_candidate_segments(i)
 
-            all_candidate_list = self.get_candidate_segments_image(os.sep.join([current_dir, i]), all_candidate_segments, number_of_frames_in_video)
+            [hard_truth, gra_truth] = self.get_labels_rai('./videos/annotations/gt_' + i.split(os.sep)[-1].split('.')[0] + '.txt')
 
-            # [hard_truth, gra_truth] = self.get_labels_rai('./annotations/gt_' + i.split('.')[0] + '.txt')
+            C3D_segments = self.get_candidate_segments_image(current_dir, os.sep.join([current_dir, i]), all_candidate_segments, number_of_frames_in_video)
+
+            self.check_candidate_segments3(C3D_segments, hard_truth, gra_truth)
+
             #
             # [missed_hard, missed_gra] = self.check_candidate_segments2(all_candidate_segments, hard_truth, gra_truth)
             #

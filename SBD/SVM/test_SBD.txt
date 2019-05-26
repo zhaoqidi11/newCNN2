@@ -1,0 +1,18 @@
+from_scratch11_c3d_sbd_iter_22000.caffemodel
+
+false number is  104
+accuracy is  0.641379310345
+
+from_scratch11_c3d_sbd_iter_22000.caffemodel
+false number is  105
+accuracy is  0.637931034483
+a
+
+from_scratch11_c3d_sbd_iter_16000.caffemodel
+false number is  105
+accuracy is  0.637931034483
+a
+
+false number is  104
+accuracy is  0.641379310345
+a
