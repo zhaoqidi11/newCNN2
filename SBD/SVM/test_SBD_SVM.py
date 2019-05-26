@@ -41,6 +41,7 @@ if __name__ == '__main__':
 
         test_x_labels = np.append(test_x_labels, np.array([int(all_test_labels[i].strip())]))
 
+
     # y_hat = clf.predict(test_x)
 
     predict =  clf.predict(test_x)
