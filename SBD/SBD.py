@@ -249,14 +249,14 @@ class SBD():
         if os.path.exists(temp_out_folder_list_path):
             os.remove(temp_out_folder_list_path)
 
-        C3D_segments = self.generate_candidate_segments_to_C3D(candidate_segments, number_of_frames_in_video, 3)
+        # C3D_segments = self.generate_candidate_segments_to_C3D(candidate_segments, number_of_frames_in_video, 3)
 
-        self.generate_images_sequence(temp_folder_path, video_path, C3D_segments)
+        self.generate_images_sequence(temp_folder_path, video_path, candidate_segments)
 
         temp_list = []
         temp_out_list = []
 
-        for i in C3D_segments:
+        for i in candidate_segments:
 
             temp_list.append(' '.join([os.sep.join([temp_folder_path, str(i[0]+1).zfill(6), '']), str(i[0]+1), '0']) + '\n')
             temp_out_list.append(os.sep.join([temp_out_folder_path, str(i[0]+1).zfill(6),str(i[0]+1).zfill(6)]) + '\n')
@@ -267,10 +267,12 @@ class SBD():
         with open(temp_out_folder_list_path, 'w') as f:
             f.writelines(temp_out_list)
 
-        return C3D_segments
+        return candidate_segments
 
 
     def detect_hard(self, candidate_segment, temp):
+
+
         print 'a'
 
 
@@ -447,7 +449,7 @@ class SBD():
 
             C3D_segments = self.get_candidate_segments_image(current_dir, os.sep.join([current_dir, i]), all_candidate_segments, number_of_frames_in_video)
 
-            self.check_candidate_segments3(C3D_segments, hard_truth, gra_truth)
+            self.check_candidate_segments3(all_candidate_segments, hard_truth, gra_truth)
 
             #
             # [missed_hard, missed_gra] = self.check_candidate_segments2(all_candidate_segments, hard_truth, gra_truth)
