@@ -13,7 +13,6 @@ import copy
 import os
 import time
 import shutil
-import numpy as np
 
 class SBD():
 
@@ -30,10 +29,6 @@ class SBD():
             begin1, end1, begin2, end2 = begin2, end2, begin1, end1
 
         return end1 > begin2
-
-    def get_pixel_diff(self, frame1, frame2, all_pixels):
-
-        return np.sum(np.power(np.abs(frame1 - frame2), 2)) / float(all_pixels)
 
     def get_frame_hist(self, frame, bins_number):
 
@@ -224,6 +219,9 @@ class SBD():
         return [[i, i+16] for i in sorted(C3D_segments_begin)]
 
 
+    def detect_hard(self,video_folder_path, candidate_segments):
+
+        print "TODO"
 
     def mkdir(self, path):
 
@@ -272,220 +270,26 @@ class SBD():
         return candidate_segments
 
 
-    def detect_hard(self, candidate_segment, video_path, all_pixels):
+    def detect_hard(self, video_folder_path, all_pixels):
 
-        d = []
 
-        i_Video = cv2.VideoCapture(video_path)
 
-        frame_first = self.get_valid_frame(i_Video, candidate_segment[0], 1)
 
 
-        for i in range(candidate_segment[0]+1,candidate_segment[1]):
 
-            frame_next = self.get_valid_frame(i_Video, i, -1)
-
-            d.append(0.5 * self.get_hist_chi_squa_diff(frame_first, frame_next, all_pixels) + 0.5 * self.get_pixel_diff(frame_first, frame_next, all_pixels))
-
-            frame_first = copy.deepcopy(frame_next)
-
-
-        return [[candidate_segment[0]+np.argmax(d), candidate_segment[0]+np.argmax(d)+1],d]
-
-    def valid_candidate_segments(self, candidate_segments, candidate_segments_label):
-
-        new_candidate_segments = []
-
-        new_candidate_segments_label = []
-
-        begin = 0
-
-        while candidate_segments_label[begin] == 0:
-
-            begin += 1
-
-        old_candidate_segment = candidate_segments[begin]
-
-        old_candidate_label = candidate_segments_label[begin]
-
-        new_candidate_segments.append(copy.deepcopy(candidate_segments[begin]))
-
-        new_candidate_segments_label.append(candidate_segments_label[begin])
-
-        for i in range(begin, len(candidate_segments)):
-
-            if candidate_segments_label[i] == 0:
-
-                continue
-
-            elif candidate_segments_label[i] != old_candidate_label:
-
-                new_candidate_segments.append(candidate_segments[i])
-
-                new_candidate_segments_label.append(copy.deepcopy(candidate_segments_label[i]))
-
-            elif self.if_overlap2(candidate_segments[i][0], candidate_segments[i][1], old_candidate_segment[0], old_candidate_segment[1]):
-
-                if old_candidate_label == 1:
-
-                    new_candidate_segments[-1] = [np.min([new_candidate_segments[-1][0], old_candidate_segment[0]]), np.max([new_candidate_segments[-1][1], old_candidate_segment[1]])]
-
-                else:
-
-                    new_candidate_segments[-1] = [np.max([new_candidate_segments[-1][0], old_candidate_segment[0]]), np.min([new_candidate_segments[-1][1], old_candidate_segment[1]])]
-
-            else:
-
-                new_candidate_segments.append(copy.deepcopy(candidate_segments[i]))
-
-                new_candidate_segments_label.append(candidate_segments_label[i])
-
-            old_candidate_segment = candidate_segments[i]
-
-            old_candidate_label = candidate_segments_label[i]
-
-
-        return [new_candidate_segments, new_candidate_segments_label]
-
-
-
-
-
-
-
-    def get_location(self, candidate_segments, candidate_segments_label, video_path, all_pixels, hard_truth):
-
-        [new_candidate_segments, new_candidate_segments_label] = self.valid_candidate_segments(candidate_segments, candidate_segments_label)
-
-        hard_cut = []
-
-        gra_cut = []
-
-
-        ################################# TEST
-        hard_candidate_segments = []
-
-        for i in  range(len(new_candidate_segments)):
-
-            if new_candidate_segments_label[i] == 2:
-
-                hard_candidate_segments.append(new_candidate_segments[i])
-
-        self.eval(hard_candidate_segments, hard_truth)
-
-
-        for i in range(len(hard_candidate_segments)):
-
-            [hard, d ] = self.detect_hard(hard_candidate_segments[i], video_path, all_pixels)
-
-            if hard not in hard_truth:
-
-                print d
-
-
-
-
-
-
-        #################################
-
-
-
-
-
-        for i in range(len(new_candidate_segments)):
-
-            if new_candidate_segments_label[i] == 1:
-
-                print "This is a gradual segment\n"
-
-            else:
-
-                hard_cut.append(self.detect_hard(new_candidate_segments[i], video_path, all_pixels))
-
-
-        return hard_cut
-
-
-
-
-
-
-
-    def process_invalid_frame(self, ret, frame, index, sign, i_video):
-
-        temp_i = index + sign
-        while ret is False:
-            i_video.set(1, temp_i)
-            ret, frame = i_video.read()
-            temp_i += sign
-        return frame
-
-    def get_valid_frame(self, i_video, index, sign):
-        i_video.set(1, index)
-        ret, frame = i_video.read()
-        if ret:
-            return frame
-        else:
-            return self.process_invalid_frame(ret, frame, index, sign, i_video)
-
-
-    def get_candidate_segments_label(self, candidate_segments, hard_truth, gra_truth):
-
-        candidate_segments_label = []
-
-        for i in range(len(candidate_segments)):
-
-            for j in range(len(hard_truth)):
-
-                if candidate_segments[i][0] > hard_truth[j][1] and j < len(hard_truth) - 1:
-                    continue
-                elif self.if_overlap(candidate_segments[i][0], candidate_segments[i][1], hard_truth[j][0],
-                                     hard_truth[j][1]):
-                    candidate_segments_label.append(2)
-                    break
-                elif candidate_segments[i][1] < hard_truth[j][0]:
-                    candidate_segments_label.append(0)
-                    break
-
-                if j == len(hard_truth) - 1:
-                    candidate_segments_label.append(0)
-
-        for i in range(len(candidate_segments)):
-
-            for j in range(len(gra_truth)):
-
-                if candidate_segments[i][0] > gra_truth[j][1]:
-                    continue
-                elif self.if_overlap(candidate_segments[i][0], candidate_segments[i][1], gra_truth[j][0],
-                                     gra_truth[j][1]):
-                    candidate_segments_label[i] = 1
-                    break
-                elif candidate_segments[i][1] < gra_truth[j][0]:
-                    break
-
-
-        return candidate_segments_label
-
+        print 'a'
 
 
     # Get candidate segments
-    def get_candidate_segments(self, VideoPath):
+    def get_candidate_segments(self, video_folder_path, all_pixels):
 
         group_length = 16
         second_group_length = 8
 
-        i_video = cv2.VideoCapture(VideoPath)
+        all_frames = glob(os.sep.join([video_folder_path, '*']))
 
-        # get width of this video
-        wid = int(i_video.get(3))
-        # get height of this video
-        hei = int(i_video.get(4))
-        # It save the number of frames in this video
-        number_of_frames_in_video = int(i_video.get(7))
+        number_of_frames_in_video = len(all_frames)
 
-        # get the frame no. of one frame in this video (be used to normalize)
-        all_pixels = wid * hei
 
         group_number = int(math.floor((number_of_frames_in_video-1) / float(group_length)))
 
@@ -493,7 +297,7 @@ class SBD():
 
         diff_group_5 = []
 
-        group_first_frame = self.get_valid_frame(i_video, 0, 1)
+        group_first_frame = cv2.imread(all_frames[0])
 
 
         # the diff between the 0 th and 10 th([0,10], [10,20], [20,30], ...) is larger than threshold
@@ -503,7 +307,7 @@ class SBD():
 
         for i in range(1, group_number+1):
 
-            group_last_frame = self.get_valid_frame(i_video, i*group_length, -1)
+            group_last_frame = cv2.imread(all_frames[i*group_length])
 
             d = self.get_hist_chi_squa_diff(group_last_frame, group_first_frame, all_pixels)
 
@@ -523,7 +327,7 @@ class SBD():
         else:
             group_5_15_number = group_number - 1
 
-        first_frame_5_to_15 = self.get_valid_frame(i_video, second_group_length, 1)
+        first_frame_5_to_15 = cv2.imread(all_frames[second_group_length])
 
         for i in range(1, group_5_15_number+1):
 
@@ -531,7 +335,7 @@ class SBD():
 
                 break
 
-            Frames10_5_2 = self.get_valid_frame(i_video, i*group_length + second_group_length, -1)
+            Frames10_5_2 = cv2.imread(i*group_length + second_group_length)
 
             d = self.get_hist_chi_squa_diff(first_frame_5_to_15, Frames10_5_2, all_pixels)
 
@@ -570,26 +374,8 @@ class SBD():
                 all_candidate_segments.extend(candidate_segments_10[i:])
                 break
 
-        return [all_candidate_segments, number_of_frames_in_video, all_pixels]
+        return [all_candidate_segments, number_of_frames_in_video]
 
-    def eval(self, cut, truth):
-
-        count = 0
-
-        for i in cut:
-
-            for j in range(len(truth)):
-
-                if self.if_overlap(i[0],i[1], truth[j][0], truth[j][1]):
-
-                    count += 1
-                    break
-
-                if j == len(truth) - 1:
-
-                    print i
-
-        return count
 
 
 
@@ -617,35 +403,26 @@ class SBD():
 
         return [hard_truth, gra_truth]
 
-    def sbd_on_rai(self):
-
-        current_dir = os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]))
-
-        path_to_video = 'videos'
-
-        videos = glob(os.sep.join([path_to_video, '*.mp4']))
+    def sbd_on_trecvid2007(self):
 
 
-        for i in videos:
-            if cmp(i.split(os.sep)[-1], '1.mp4') != 0:
-                continue
+        videos_folder_path = '/home/t2007'
+
+
+        for i in videos_folder_path:
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
 
             begin_time = time.time()
 
 
-            [all_candidate_segments, number_of_frames_in_video, all_pixels] = self.get_candidate_segments(i)
+            [all_candidate_segments, number_of_frames_in_video] = self.get_candidate_segments(i, all_pixels)
 
             [hard_truth, gra_truth] = self.get_labels_rai('./videos/annotations/gt_' + i.split(os.sep)[-1].split('.')[0] + '.txt')
 
-            hard_cut = self.get_location(all_candidate_segments, self.get_candidate_segments_label(all_candidate_segments, hard_truth
-                                                                                        , gra_truth), i, all_pixels, hard_truth)
-            correct_number = self.eval(hard_cut, hard_truth)
+            C3D_segments = self.get_candidate_segments_image(current_dir, os.sep.join([current_dir, i]), all_candidate_segments, number_of_frames_in_video)
 
-            # C3D_segments = self.get_candidate_segments_image(current_dir, os.sep.join([current_dir, i]), all_candidate_segments, number_of_frames_in_video)
-
-            # self.check_candidate_segments3(all_candidate_segments, hard_truth, gra_truth)
+            self.check_candidate_segments3(all_candidate_segments, hard_truth, gra_truth)
 
             #
             # [missed_hard, missed_gra] = self.check_candidate_segments2(all_candidate_segments, hard_truth, gra_truth)
