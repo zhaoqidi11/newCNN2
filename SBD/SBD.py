@@ -183,13 +183,13 @@ class SBD():
 
             os.mkdir(save_path)
 
-            while index < i[1]-1:
+            while index < i[1]+1:
 
                 cv2.imwrite(os.sep.join([save_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, index, 1))
 
                 index += 1
 
-            cv2.imwrite(os.sep.join([save_path, '.'.join([str(i[1]).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, i[1]-1, -1))
+            cv2.imwrite(os.sep.join([save_path, '.'.join([str(i[1]+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, i[1], -1))
 
 
 
@@ -271,6 +271,17 @@ class SBD():
 
         return candidate_segments
 
+    def detect_gra(self, candidate_segment):
+
+        if len(candidate_segment) == 0:
+
+            return 0
+
+        gra_cut = candidate_segment[0]
+
+        for i in candidate_segment[1:]:
+
+            print 'a'
 
     def detect_hard(self, candidate_segment, video_path, all_pixels):
 
@@ -290,7 +301,7 @@ class SBD():
             frame_first = copy.deepcopy(frame_next)
 
 
-        return [[candidate_segment[0]+np.argmax(d), candidate_segment[0]+np.argmax(d)+1],d]
+        return [candidate_segment[0]+np.argmax(d), candidate_segment[0]+np.argmax(d)+1]
 
     def valid_candidate_segments(self, candidate_segments, candidate_segments_label):
 
@@ -360,36 +371,6 @@ class SBD():
         hard_cut = []
 
         gra_cut = []
-
-
-        ################################# TEST
-        hard_candidate_segments = []
-
-        for i in  range(len(new_candidate_segments)):
-
-            if new_candidate_segments_label[i] == 2:
-
-                hard_candidate_segments.append(new_candidate_segments[i])
-
-        self.eval(hard_candidate_segments, hard_truth)
-
-
-        for i in range(len(hard_candidate_segments)):
-
-            [hard, d ] = self.detect_hard(hard_candidate_segments[i], video_path, all_pixels)
-
-            if hard not in hard_truth:
-
-                print d
-
-
-
-
-
-
-        #################################
-
-
 
 
 
@@ -569,6 +550,15 @@ class SBD():
             elif j == len(candidate_segments_5) and i < len(candidate_segments_10):
                 all_candidate_segments.extend(candidate_segments_10[i:])
                 break
+        for i in all_candidate_segments:
+
+            i[1] += 1
+
+        if all_candidate_segments[-1][1] >= number_of_frames_in_video:
+
+            all_candidate_segments[-1][0] = number_of_frames_in_video - (second_group_length + 1)
+
+            all_candidate_segments[-1][1] = number_of_frames_in_video - 1
 
         return [all_candidate_segments, number_of_frames_in_video, all_pixels]
 
@@ -627,7 +617,7 @@ class SBD():
 
 
         for i in videos:
-            if cmp(i.split(os.sep)[-1], '1.mp4') != 0:
+            if cmp(i.split(os.sep)[-1], '3.mp4') != 0:
                 continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
@@ -643,7 +633,12 @@ class SBD():
                                                                                         , gra_truth), i, all_pixels, hard_truth)
             correct_number = self.eval(hard_cut, hard_truth)
 
-            # C3D_segments = self.get_candidate_segments_image(current_dir, os.sep.join([current_dir, i]), all_candidate_segments, number_of_frames_in_video)
+
+
+
+
+            # C3D_segments = self.get_candidate_segments_image(current_dir, i, all_candidate_segments, number_of_frames_in_video)
+
 
             # self.check_candidate_segments3(all_candidate_segments, hard_truth, gra_truth)
 

@@ -6,7 +6,7 @@ import numpy as np
 # with open('/home/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/TrainLog26.log') as f:
 #     data = f.read()
 
-with open('/home/C3D/C3D-v1.1/dsbd/solver15.log') as f:
+with open('/home/C3D/C3D-v1.1/dsbd/solver25.log') as f:
     data = f.read()
 # pattern = re.compile(r'''
 # I0(.*?)solver.cpp:238]     Train net output #1: loss = (.*?) \(\* 1 = (.*?) loss\)
