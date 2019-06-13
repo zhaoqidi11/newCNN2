@@ -96,7 +96,7 @@ class SVD():
 
             d_length_frame[video_number-1] = self.get_valid_frame(i_Video, video_number-1, -1)
 
-            d_length.append(self.get_pixel_diff( d_length_frame[(group_number-1)*(length = 1)], d_length_frame[video_number-1]))
+            d_length.append(self.get_pixel_diff( d_length_frame[(group_number-1)*(length - 1)], d_length_frame[video_number-1]))
 
 
         GroupNumber = 10

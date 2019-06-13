@@ -14,7 +14,6 @@ import os
 import time
 import shutil
 import numpy as np
-from glob2 import glob
 
 class SBD():
 
@@ -174,7 +173,6 @@ class SBD():
 
     def generate_images_sequence(self, tmp_folder_path, video_path, C3D_segments):
 
-        i_video = cv2.VideoCapture(video_path)
 
         for i in C3D_segments:
 
@@ -184,13 +182,13 @@ class SBD():
 
             os.mkdir(save_path)
 
-            while index < i[1]+1:
+            while index < i[1]:
 
-                cv2.imwrite(os.sep.join([save_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, index, 1))
+                cv2.imwrite(os.sep.join([save_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(video_path, index))
 
                 index += 1
 
-            cv2.imwrite(os.sep.join([save_path, '.'.join([str(i[1]+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, i[1], -1))
+            cv2.imwrite(os.sep.join([save_path, '.'.join([str(i[1]+1).zfill(6), 'jpg'])]), self.get_valid_frame(video_path, i[1]))
 
 
 
@@ -288,14 +286,12 @@ class SBD():
 
         d = []
 
-        i_Video = cv2.VideoCapture(video_path)
-
-        frame_first = self.get_valid_frame(i_Video, candidate_segment[0], 1)
+        frame_first = self.get_valid_frame(video_path, candidate_segment[0])
 
 
         for i in range(candidate_segment[0]+1,candidate_segment[1]):
 
-            frame_next = self.get_valid_frame(i_Video, i, -1)
+            frame_next = self.get_valid_frame(video_path, i)
 
             d.append(0.5 * self.get_hist_chi_squa_diff(frame_first, frame_next, all_pixels) + 0.5 * self.get_pixel_diff(frame_first, frame_next, all_pixels))
 
@@ -407,9 +403,9 @@ class SBD():
 
         suffix = 'jpg'
 
-        frame = cv2.imread(os.sep.join([frames_path, '.'.join([index, suffix])]))
+        frame = cv2.imread(os.sep.join([frames_path, '.'.join([str(index), suffix])]))
 
-
+        return frame
 
 
     def get_candidate_segments_label(self, candidate_segments, hard_truth, gra_truth):
@@ -454,14 +450,14 @@ class SBD():
     # Get candidate segments
     def get_candidate_segments(self, VideoPath):
 
-        group_length = 14
+        group_length = 16
 
-        second_group_length = 7
+        second_group_length = 8
+
+        threshold = 0.3
 
         all_frames = glob(os.sep.join([VideoPath, '*']))
 
-
-        # It save the number of frames in this video
         number_of_frames_in_video = len(all_frames)
 
         frame_shape = cv2.imread(all_frames[0]).shape
@@ -473,13 +469,12 @@ class SBD():
         # get the frame no. of one frame in this video (be used to normalize)
         all_pixels = wid * hei
 
-        group_number = int(math.floor((number_of_frames_in_video-1) / float(group_length)))
+        group_number = (number_of_frames_in_video - group_length) / (group_length - 1) + 1
+
 
         diff_group_10 = []
 
         diff_group_5 = []
-
-        group_first_frame = self.get_valid_frame(VideoPath, )
 
 
         # the diff between the 0 th and 10 th([0,10], [10,20], [20,30], ...) is larger than threshold
@@ -487,45 +482,61 @@ class SBD():
         # the diff between the 5 th and 15 th([5,15], [15,25], [25,35], ...) is larger than threshold
         candidate_segments_5 = []
 
-        for i in range(1, group_number+1):
 
-            group_last_frame = self.get_valid_frame(i_video, i*group_length, -1)
+        group_first_frame = self.get_valid_frame(VideoPath, group_length - 1)
+
+        d = self.get_hist_chi_squa_diff(self.get_valid_frame(VideoPath, 0), group_first_frame, all_pixels)
+
+        if d > threshold:
+
+            candidate_segments_10.append([0, group_length - 1])
+
+            diff_group_10.append(d)
+
+
+
+        for i in range(1, group_number):
+
+            group_last_frame = self.get_valid_frame(VideoPath, group_length-1 + i*(group_length-1))
 
             d = self.get_hist_chi_squa_diff(group_last_frame, group_first_frame, all_pixels)
 
-            if d > 0.5:
+            if d > threshold:
 
-                candidate_segments_10.append([(i - 1) * group_length, i * group_length])
+                candidate_segments_10.append([group_length-1 + (i-1)*(group_length-1), group_length-1 + i*(group_length-1)])
 
                 diff_group_10.append(d)
 
             group_first_frame = copy.deepcopy(group_last_frame)
 
 
+        group_5_15_number = (number_of_frames_in_video - second_group_length - group_length) / (group_length) + 1
 
-        if number_of_frames_in_video % group_length > number_of_frames_in_video % second_group_length:
 
-            group_5_15_number = group_number
-        else:
-            group_5_15_number = group_number - 1
 
-        first_frame_5_to_15 = self.get_valid_frame(i_video, second_group_length, 1)
 
-        for i in range(1, group_5_15_number+1):
+        first_frame_5_to_15 = self.get_valid_frame(VideoPath, second_group_length + group_length - 1)
 
-            if i * group_length + second_group_length >= number_of_frames_in_video:
+        d = self.get_hist_chi_squa_diff(first_frame_5_to_15, self.get_valid_frame(VideoPath, second_group_length), all_pixels)
 
-                break
+        if d > threshold:
 
-            Frames10_5_2 = self.get_valid_frame(i_video, i*group_length + second_group_length, -1)
+            candidate_segments_5.append([second_group_length, second_group_length + group_length - 1])
+
+            diff_group_5.append(d)
+
+
+        for i in range(1, group_5_15_number):
+
+            Frames10_5_2 = self.get_valid_frame(VideoPath, second_group_length + group_length-1 + i*(group_length-1))
 
             d = self.get_hist_chi_squa_diff(first_frame_5_to_15, Frames10_5_2, all_pixels)
 
-            if d > 0.5:
+            if d > threshold:
 
-                candidate_segments_5.append([(i - 1) * group_length + second_group_length,
+                candidate_segments_5.append([second_group_length + group_length-1 + (i-1)*(group_length-1),
 
-                                           i * group_length + second_group_length])
+                                           second_group_length + group_length-1 + i*(group_length-1)])
                 diff_group_5.append(d)
 
             first_frame_5_to_15 = copy.deepcopy(Frames10_5_2)
@@ -555,9 +566,6 @@ class SBD():
             elif j == len(candidate_segments_5) and i < len(candidate_segments_10):
                 all_candidate_segments.extend(candidate_segments_10[i:])
                 break
-        for i in all_candidate_segments:
-
-            i[1] += 1
 
         if all_candidate_segments[-1][1] >= number_of_frames_in_video:
 
@@ -589,58 +597,59 @@ class SBD():
 
 
 
-    def get_labels_rai(self, label_path):
+    def get_labels_TRECViD(self, label_path):
 
         hard_truth = []
         gra_truth = []
 
         with open(label_path) as f:
-            all_lines = f.readlines()
 
-        ground_truth = [[int(all_lines[0].strip().split('\t')[1])]]
+            xmlfile = f.readlines()
 
-        for i in range(1, len(all_lines) - 1):
-            ground_truth[-1].extend([int(all_lines[i].strip().split('\t')[0])])
-            ground_truth.append([int(all_lines[i].strip().split('\t')[1])])
-        ground_truth[-1].extend([int(all_lines[-1].strip().split('\t')[0])])
-
-        for i in ground_truth:
-            if i[1]-i[0] == 1:
-                hard_truth.append(i)
-            else:
-                gra_truth.append(i)
+        for i in range(len(xmlfile)):
+            if 'CUT' in xmlfile[i]:
+                hard_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
+            elif 'DIS' in xmlfile[i] or 'OTH' in xmlfile[i]:
+                gra_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
 
         return [hard_truth, gra_truth]
 
     def sbd_on_trecvid(self):
 
-        path_to_video = '/home/t2007'
+        current_dir = os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]))
 
-        videos = glob(os.sep.join([path_to_video, '*']))
+        path_to_frames = '/home/t2007'
 
+        videos = glob(os.sep.join([path_to_frames, '*']))
+
+        labels_path = '/home/t2007ref'
 
         for i in videos:
+
+            # if cmp(i.split(os.sep)[-1], '4.mp4') != 0:
+            #     continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
 
             begin_time = time.time()
 
+
             [all_candidate_segments, number_of_frames_in_video, all_pixels] = self.get_candidate_segments(i)
 
-            [hard_truth, gra_truth] = self.get_labels_rai('./videos/annotations/gt_' + i.split(os.sep)[-1].split('.')[0] + '.txt')
+            [hard_truth, gra_truth] = self.get_labels_TRECViD(os.sep.join([labels_path, 'ref_' + i.split(os.sep)[-1] + '.xml']))
 
-            hard_cut = self.get_location(all_candidate_segments, self.get_candidate_segments_label(all_candidate_segments, hard_truth
-                                                                                        , gra_truth), i, all_pixels, hard_truth)
-            correct_number = self.eval(hard_cut, hard_truth)
-
-
+            # hard_cut = self.get_location(all_candidate_segments, self.get_candidate_segments_label(all_candidate_segments, hard_truth
+                                                                                        # , gra_truth), i, all_pixels, hard_truth)
+            # correct_number = self.eval(hard_cut, hard_truth)
 
 
 
-            # C3D_segments = self.get_candidate_segments_image(current_dir, i, all_candidate_segments, number_of_frames_in_video)
 
 
-            # self.check_candidate_segments3(all_candidate_segments, hard_truth, gra_truth)
+            C3D_segments = self.get_candidate_segments_image(current_dir, i, all_candidate_segments, number_of_frames_in_video)
+            #
+            #
+            self.check_candidate_segments3(all_candidate_segments, hard_truth, gra_truth)
 
             #
             # [missed_hard, missed_gra] = self.check_candidate_segments2(all_candidate_segments, hard_truth, gra_truth)

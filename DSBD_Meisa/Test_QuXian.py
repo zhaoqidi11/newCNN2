@@ -6,7 +6,7 @@ import numpy as np
 # with open('/home/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/TrainLog26.log') as f:
 #     data = f.read()
 
-with open('/home/C3D/C3D-v1.1/dsbd/solver25.log') as f:
+with open('/home/C3D/C3D-v1.1/newdsbd/new_train_log_5.log') as f:
     data = f.read()
 # pattern = re.compile(r'''
 # I0(.*?)solver.cpp:238]     Train net output #1: loss = (.*?) \(\* 1 = (.*?) loss\)
@@ -53,7 +53,7 @@ for result in results2:
 average_test = []
 # Count = 73
 
-AllNum = 79
+AllNum = 50
 Count = len(test_loss) - AllNum
 for i in range(Count):
     average_test.append(np.average(test_loss[i:i+AllNum]))
@@ -64,7 +64,7 @@ average_x_axis = range(Count)
 average_train = []
 
 # train_num = 432
-train_num = 52
+train_num = 50
 train_count = len(train_loss) - train_num
 
 
@@ -75,10 +75,10 @@ for i in range(train_count):
 average_x_axis_train = range(train_count)
 
 plt.subplot(211)
-plt.plot(average_x_axis[2:], average_test[2:])
+plt.plot(average_x_axis, average_test)
 
 plt.subplot(212)
-plt.plot(average_x_axis_train[-100:], average_train[-100:])
+plt.plot(average_x_axis_train, average_train)
 
 
 # plt.subplot(311)
