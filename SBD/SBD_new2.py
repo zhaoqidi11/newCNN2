@@ -18,6 +18,26 @@ from read_binary_blob import read_binary_blob
 
 class SBD():
 
+    def get_frame_hist(self, frame, bins_number):
+
+        B_frame_hist = cv2.calcHist([frame], channels=[0], mask=None, ranges=[0.0, 255.0], histSize=[bins_number])
+        G_frame_hist = cv2.calcHist([frame], channels=[1], mask=None, ranges=[0.0, 255.0], histSize=[bins_number])
+        R_frame_hist = cv2.calcHist([frame], channels=[2], mask=None, ranges=[0.0, 255.0], histSize=[bins_number])
+
+        return[B_frame_hist, G_frame_hist, R_frame_hist]
+
+    def get_hist_chi_squa_diff(self, frame1, frame2, allpixels):
+        bins_number = 64
+
+        [B_frame1_hist, G_frame1_hist, R_frame1_hist] = self.get_frame_hist(frame1, bins_number)
+        [B_frame2_hist, G_frame2_hist, R_frame2_hist] = self.get_frame_hist(frame2, bins_number)
+
+        return (cv2.compareHist(B_frame1_hist, B_frame2_hist, method=cv2.HISTCMP_CHISQR) + \
+               cv2.compareHist(G_frame1_hist, G_frame2_hist, method=cv2.HISTCMP_CHISQR) + \
+               cv2.compareHist(R_frame1_hist, R_frame2_hist, method=cv2.HISTCMP_CHISQR))/allpixels
+
+
+
     def if_overlap(self, begin1, end1, begin2, end2):
 
         if begin1 > begin2:
@@ -446,16 +466,55 @@ class SBD():
 
         return candidate_segments_label
 
+    def remove_elements_from_list(self, to_be_removed_elements, list):
+
+        new_list = []
+
+        if len(to_be_removed_elements) == 0:
+
+            return list
+
+
+        if to_be_removed_elements[0] > 0 :
+
+            new_list = list[0:to_be_removed_elements[0]]
+
+        begin = to_be_removed_elements[0] + 1
+
+        for i in to_be_removed_elements[1:]:
+
+            new_list.extend(list[begin:i])
+
+            begin = i + 1
+
+        if begin < len(list):
+
+            new_list.extend(list[begin:])
+
+        return new_list
+
+
+
+
+
+
     def remove_invalid_segments(self, candidate_segments, video_path):
 
         temporal_window = 8
 
-        for i in candidate_segments:
+        invalid_index = []
 
-            first_frame = cv2.imread(os.path.join(video_path, i/temporal_window))
+        for i in range(len(candidate_segments)):
 
-            last_frame = cv2.imread(os.path.join(video_path, i/temporal_window + 2*temporal_window))
+            first_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+1).zfill(6)+'.jpg'))
 
+            last_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+2*temporal_window).zfill(6)+'.jpg'))
+
+            if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + 0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 10:
+
+                invalid_index.append(i)
+
+        return self.remove_elements_from_list(invalid_index, candidate_segments)
 
 
 
@@ -503,7 +562,7 @@ class SBD():
 
         model_file = 'feature_extract.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/newdsbd/new_c3d_resnet18_iter_24000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/newdsbd/after_58000_new_c3d_resnet18_iter_28000.caffemodel'
 
         gpu_id = '1'
 
@@ -539,30 +598,23 @@ class SBD():
 
         gra_segments = []
 
+        prob_list = {}
+
         for i in all_segments:
 
             (s, prob) = read_binary_blob(i + suffix)
 
+            prob_list[i] = prob
+
             if np.argmax(prob) == 1:
-
-                if len(gra_segments) > 0 and (self.if_overlap(gra_segments[-1][0], gra_segments[-1][1],
-                                                              int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length) or int(i.split(os.sep)[-1])-gra_segments[-1][1] == 1):
-
-                    gra_segments[-1][1] = int(i.split(os.sep)[-1]) + length
-
-                else:
 
                     gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
             elif np.argmax(prob) == 2:
 
-                if len(hard_segments) > 0 and self.if_overlap(hard_segments[-1][0], hard_segments[-1][1], int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length):
-
-                    hard_segments[-1][0] = int(i.split(os.sep)[-1])
-
-                else:
-
                     hard_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+
+        prob_list = sorted(prob_list.items(), key=lambda item: item[0])
 
         hard_segments = [[i[0]-1, i[1]-1] for i in hard_segments]
         gra_segments = [[i[0]-1, i[1]-1] for i in gra_segments]
@@ -628,13 +680,15 @@ class SBD():
 
             begin_time = time.time()
 
-            # self.extract_features(i)
+            self.extract_features(i)
 
             [hard_segments, gra_segments] = self.get_candidate_segments()
 
+            gra_segments = self.remove_invalid_segments(gra_segments, i)
+
             [hard_truth, gra_truth] = self.get_labels_TRECViD(os.sep.join([labels_path, 'ref_' + i.split(os.sep)[-1] + '.xml']))
 
-            self.eval(hard_segments, hard_truth)
+            self.eval(gra_segments, gra_truth)
 
             end_time = time.time()
 

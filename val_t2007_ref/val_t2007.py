@@ -1,5 +1,5 @@
 import os
-
+from copy import deepcopy
 
 def if_overlap(begin1, end1, begin2, end2):
     if begin1 > begin2:
@@ -35,6 +35,8 @@ if __name__ == '__main__':
 
     segments_begin = {}
 
+    prefix =lines[0].strip().split(os.sep)[:4]
+
     for i in lines:
 
         if cmp(i.strip().split(' ')[0].split(os.sep)[4], 'BG_' + str(id)) == 0:
@@ -43,25 +45,40 @@ if __name__ == '__main__':
 
     segments_begin = sorted(segments_begin.items(), key=lambda item:item[0])
 
-    index = 0
+    all_segments = []
 
-    for i in segments_begin:
+    for i in range(1, len(segments_begin)+1):
 
-        for j in truth:
+        prefix_back = deepcopy(prefix)
 
-            if if_overlap(i[0], i[0]+15, j[0], j[1]):
+        prefix_back.extend(['BG_'+str(id), str(i).zfill(6), ''])
 
-                if j[1]-j[0] == 1:
+        all_segments.append(os.sep.join(prefix_back) + ' '+ str(segments_begin[i-1][0]+1)+' '+ str(segments_begin[i-1][1]) + '\n')
 
-                    if i[1] == 2:
+    with open('/home/BG_'+str(id)+'.txt', 'w') as f:
+        f.writelines(all_segments)
 
-                        continue
-                elif i[1] == 1:
+    print 'a'
 
-                    continue
-
-                else:
-
-                    print i, '\n'
+    # index = 0
+    #
+    # for i in segments_begin:
+    #
+    #     for j in truth:
+    #
+    #         if if_overlap(i[0], i[0]+15, j[0], j[1]):
+    #
+    #             if j[1]-j[0] == 1:
+    #
+    #                 if i[1] == 2:
+    #
+    #                     continue
+    #             elif i[1] == 1:
+    #
+    #                 continue
+    #
+    #             else:
+    #
+    #                 print i, '\n'
 
     print 'a'
