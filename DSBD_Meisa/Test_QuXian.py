@@ -6,7 +6,7 @@ import numpy as np
 # with open('/home/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/TrainLog26.log') as f:
 #     data = f.read()
 
-with open('/home/C3D/C3D-v1.1/newdsbd/new_train_log_9.log') as f:
+with open('/home/C3D/C3D-v1.1/newdsbd/new_train_log_20.log') as f:
     data = f.read()
 # pattern = re.compile(r'''
 # I0(.*?)solver.cpp:238]     Train net output #1: loss = (.*?) \(\* 1 = (.*?) loss\)
@@ -64,7 +64,7 @@ average_x_axis = range(Count)
 average_train = []
 
 # train_num = 432
-train_num = 200
+train_num = 2000
 train_count = len(train_loss) - train_num
 
 

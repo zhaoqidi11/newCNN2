@@ -32,33 +32,35 @@ class SVD():
     def get_pixel_diff(self, frame1, frame2):
 
         return np.sum(np.abs(frame1 - frame2))
-    # process the invalid frame in a segment
-    def process_invalid_frame(self, ret, frame, index, sign, i_video):
 
-        temp_i = index + sign
-        while ret is False:
-            i_video.set(1, temp_i)
-            ret, frame = i_video.read()
-            temp_i += sign
-        return frame
+    def get_valid_frame(self, frame_path, index, sign):
 
-    def get_valid_frame(self, i_video, index, sign):
-        i_video.set(1, index)
-        ret, frame = i_video.read()
-        if ret:
-            return frame
+        frame = cv2.imread(frame_path[index])
+
+        while type(frame) is  None:
+
+            index += sign
+
+            frame = cv2.imread(frame_path[index + sign])
+
         else:
-            return self.process_invalid_frame(ret, frame, index, sign, i_video)
+
+            return frame
 
     def candidate_segments(self, video_path):
 
-        i_Video = cv2.VideoCapture(video_path)
+        frames_path = glob(os.path.join(video_path, '*.jpg'))
 
-        video_number = i_Video.get(7)
+        frames_path_suffix = frames_path[0].split(os.sep)[:-1]
+
+        video_number = len(frames_path)
+
+        frames_path = [os.path.join(os.sep.join(frames_path_suffix),(str(i)+'.jpg')) for i in range(video_number)]
 
         length = 21
 
         group_number = (video_number - length) / (length - 1) + 1
+
 
         rest_first = -1
 
@@ -79,41 +81,46 @@ class SVD():
 
         all_segments = []
 
-        first_frame_of_group = self.get_valid_frame(i_Video, 0, 1)
+        all_segments_flag = []
+
+        first_frame_of_group = self.get_valid_frame(frames_path, 0, 1)
+
+        frame[0] = deepcopy(first_frame_of_group)
 
         for i in range(group_number-1):
 
-            last_frame_of_group = self.get_valid_frame(i_Video, (i + 1) * (length - 1), -1)
+            last_frame_of_group = self.get_valid_frame(frames_path, (i + 1) * (length - 1), -1)
+
+            frame[(i+1)*(length-1)] = deepcopy(last_frame_of_group)
 
             d_length.append(self.get_pixel_diff(first_frame_of_group, last_frame_of_group))
 
             all_segments.append([i*(length-1), (i+1)*(length-1)])
 
-            frame[i * (length - 1)]  = deepcopy(first_frame_of_group)
+            all_segments_flag.append(0)
 
             first_frame_of_group = deepcopy(last_frame_of_group)
-
-        frame[(group_number-1)*(length-1)] = first_frame_of_group
 
         if rest_first != -1:
 
             # frame[rest_first] = self.get_valid_frame(i_Video, rest_first, 1)
 
-            frame[rest_last] = self.get_valid_frame(i_Video, rest_last, -1)
+            frame[rest_last] = self.get_valid_frame(frames_path, rest_last, -1)
 
-            d_length.append(self.get_pixel_diff(frame[rest_first] , frame[rest_last]))
+            d_length.append(self.get_pixel_diff(frame[rest_first], frame[rest_last]))
 
             all_segments.append([rest_first, rest_last])
 
         else:
 
-            frame[video_number-1] = self.get_valid_frame(i_Video, video_number-1, -1)
+            frame[video_number-1] = self.get_valid_frame(frames_path, video_number-1, -1)
 
             d_length.append(self.get_pixel_diff(frame[length + (group_number - 1) * (length - 1) - 1], frame[video_number-1]))
 
             all_segments.append([length + (group_number - 1) * (length - 1) - 1, video_number - 1])
 
-        candidate_segments = []
+        all_segments_flag.append(0)
+
 
         GroupNumber = 10
 
@@ -125,19 +132,84 @@ class SVD():
 
         a = 0.7
 
-        for i in range(NoOfGroup):
+        for i in range(NoOfGroup-1):
 
-            Now_Group = d_length[i*GroupNumber:i+GroupNumber]
+            Now_Group = d_length[i*GroupNumber:i*GroupNumber + GroupNumber]
 
             local_mean = np.mean(Now_Group)
 
             Tl.append(local_mean + a*(1+math.log(global_mean/local_mean))*np.std(local_mean))
 
-            for j in Now_Group:
+            for j in range(len(Now_Group)):
 
-                if j > Tl[-1]:
+                if Now_Group[j] > Tl[-1]:
 
-                    candidate_segments.append([0])
+                    all_segments_flag[i*GroupNumber+j] = 1
+
+        local_mean = np.mean(d_length[(NoOfGroup-1)*GroupNumber:len(d_length)])
+
+        Tl.append(local_mean + a*(1+math.log(global_mean/local_mean))*np.std(local_mean))
+
+        for j in range(len(d_length[(NoOfGroup-1)*GroupNumber:len(d_length)])):
+
+            if d_length[(NoOfGroup-1)*GroupNumber + j] > Tl[-1]:
+
+                all_segments_flag[(NoOfGroup-1)*GroupNumber + j] = 1
+
+        for i in range(1, len(d_length)-1):
+
+            if ((d_length[i] > 3*d_length[i-1]) or (d_length[i] > 3*d_length[i+1])) and (d_length[i] > 0.8*global_mean):
+
+                all_segments_flag[i] = 1
+
+        gra_segments = []
+
+        second_segments = []
+
+        second_segments_flag = []
+
+        for i in range(len(all_segments_flag)):
+
+            if all_segments_flag[i] == 1:
+
+                middle_frame = self.get_valid_frame(frames_path, all_segments[i][0] + (length-1)/2,1)
+
+                d_f = self.get_pixel_diff(frame[all_segments[i][0]], middle_frame)
+
+                d_b = self.get_pixel_diff(frame[all_segments[i][1]], middle_frame)
+
+                if d_f / d_b > 1.2:
+
+                    second_segments.append([all_segments[i][0], all_segments[i][0] + (length-1)/2])
+
+                    frame[all_segments[i][0] + (length-1)/2] = deepcopy(middle_frame)
+
+                elif d_b / d_f > 1.2:
+
+                    second_segments.append([all_segments[i][0] + (length-1)/2, all_segments[i][1]])
+
+                    frame[all_segments[i][0] + (length-1)/2] = deepcopy(middle_frame)
+
+                elif d_f / d_length[i] < 0.3 and d_b / d_length[i] < 0.3:
+
+                    continue
+
+                else:
+
+                    gra_segments.append(all_segments[i])
+
+        print 'a'
+
+
+
+
+        print 'a'
+
+
+
+
+
+        print 'a'
 
     def get_labels_TRECViD(self, label_path):
 
@@ -160,7 +232,7 @@ class SVD():
 
         current_dir = os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]))
 
-        path_to_frames = '/home/DSBD_Test/segments'
+        path_to_frames = '/home/t2007'
 
         videos = glob(os.sep.join([path_to_frames, '*']))
 

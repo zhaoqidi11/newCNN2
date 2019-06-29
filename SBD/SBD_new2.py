@@ -562,11 +562,11 @@ class SBD():
 
         model_file = 'feature_extract.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/newdsbd/after_58000_new_c3d_resnet18_iter_28000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/newdsbd/models/train4_1_iter_160000.caffemodel'
 
         gpu_id = '1'
 
-        batch_size = '2'
+        batch_size = '4'
 
         batch_num = str(int(math.ceil(float(len(all_group)) / int(batch_size))))
 
@@ -633,6 +633,8 @@ class SBD():
                 if self.if_overlap(i[0],i[1], truth[j][0], truth[j][1]):
 
                     count += 1
+
+                    print 'y, ', i
                     break
 
                 if j == len(truth) - 1:
@@ -673,22 +675,22 @@ class SBD():
 
         for i in videos:
 
-            # if cmp(i.split(os.sep)[-1], '4.mp4') != 0:
-            #     continue
+            if cmp(i.split(os.sep)[-1], 'BG_2408') != 0:
+                continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
 
             begin_time = time.time()
 
-            self.extract_features(i)
+            # self.extract_features(i)
 
             [hard_segments, gra_segments] = self.get_candidate_segments()
 
-            gra_segments = self.remove_invalid_segments(gra_segments, i)
+            # gra_segments = self.remove_invalid_segments(gra_segments, i)
 
             [hard_truth, gra_truth] = self.get_labels_TRECViD(os.sep.join([labels_path, 'ref_' + i.split(os.sep)[-1] + '.xml']))
 
-            self.eval(gra_segments, gra_truth)
+            self.eval(hard_segments, hard_truth)
 
             end_time = time.time()
 
