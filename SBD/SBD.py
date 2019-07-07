@@ -629,7 +629,9 @@ class SBD():
 
 
         for i in videos:
+
             if cmp(i.split(os.sep)[-1], '1.mp4') != 0:
+
                 continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
@@ -639,7 +641,7 @@ class SBD():
 
             [all_candidate_segments, number_of_frames_in_video, all_pixels] = self.get_candidate_segments(i)
 
-            [hard_truth, gra_truth] = self.get_labels_rai('./videos/annotations/gt_' + i.split(os.sep)[-1].split('.')[0] + '.txt')
+
 
             # hard_cut = self.get_location(all_candidate_segments, self.get_candidate_segments_label(all_candidate_segments, hard_truth
                                                                                         # , gra_truth), i, all_pixels, hard_truth)

@@ -43,10 +43,10 @@ def Get_Data(data):
 
 if __name__ == '__main__':
 
-    with open('/home/C3D/C3D-v1.1/newdsbd/new_train_log_1.log') as f:
+    with open('/home/C3D/C3D-v1.1/newdsbd/train6_2.log') as f:
         data1 = f.read()
 
-    with open('/home/C3D/C3D-v1.1/newdsbd/new_train_log_5.log') as f:
+    with open('/home/C3D/C3D-v1.1/newdsbd/train5_1.log') as f:
         data2 = f.read()
 
     results1 = Get_Data(data1)
