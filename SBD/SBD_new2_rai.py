@@ -15,6 +15,7 @@ import time
 import shutil
 import numpy as np
 from read_binary_blob import read_binary_blob
+from copy import deepcopy
 
 class SBD():
 
@@ -294,7 +295,7 @@ class SBD():
 
         model_file = 'feature_extract2.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train5_3_iter_200000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train6_1_iter_200000.caffemodel'
 
         gpu_id = '1'
 
@@ -322,18 +323,20 @@ class SBD():
 
             print 'a'
 
-    def detect_hard(self, candidate_segment, video_path, all_pixels):
+    def detect_hard(self, candidate_segment, video_path):
 
         d = []
 
-        frame_first = self.get_valid_frame(video_path, candidate_segment[0])
+        i_Video = cv2.VideoCapture(video_path)
+
+        frame_first = self.get_valid_frame(i_Video, candidate_segment[0], 1)
 
 
         for i in range(candidate_segment[0]+1,candidate_segment[1]):
 
-            frame_next = self.get_valid_frame(video_path, i)
+            frame_next = self.get_valid_frame(i_Video, i, -1)
 
-            d.append(0.5 * self.get_hist_chi_squa_diff(frame_first, frame_next, all_pixels) + 0.5 * self.get_pixel_diff(frame_first, frame_next, all_pixels))
+            d.append(0.5 * self.get_hist_chi_squa_diff(frame_first, frame_next, frame_first.shape[0] * frame_first.shape[1]) + 0.5 * self.get_pixel_diff(frame_first, frame_next, frame_first.shape[0] * frame_first.shape[1]))
 
             frame_first = copy.deepcopy(frame_next)
 
@@ -401,25 +404,15 @@ class SBD():
 
 
 
-    def get_location(self, candidate_segments, candidate_segments_label, video_path, all_pixels, hard_truth):
+    def get_location(self, candidate_segments, video_path):
 
-        [new_candidate_segments, new_candidate_segments_label] = self.valid_candidate_segments(candidate_segments, candidate_segments_label)
 
         hard_cut = []
 
-        gra_cut = []
 
+        for i in range(len(candidate_segments)):
 
-
-        for i in range(len(new_candidate_segments)):
-
-            if new_candidate_segments_label[i] == 1:
-
-                print "This is a gradual segment\n"
-
-            else:
-
-                hard_cut.append(self.detect_hard(new_candidate_segments[i], video_path, all_pixels))
+            hard_cut.append(self.detect_hard(candidate_segments[i], video_path))
 
 
         return hard_cut
@@ -536,7 +529,9 @@ class SBD():
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
             #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 110:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 10:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) <10:
+
+            # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) <0.5:
 
             # if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
 
@@ -790,8 +785,6 @@ class SBD():
 
                     hard_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
-        hard_segments = [[i[0]-1, i[1]-1] for i in hard_segments]
-        gra_segments = [[i[0]-1, i[1]-1] for i in gra_segments]
 
         return [hard_segments, gra_segments]
 
@@ -805,7 +798,7 @@ class SBD():
 
         for i in videos:
 
-            if cmp(i.split(os.sep)[-1], '4.mp4') != 0:
+            if cmp(i.split(os.sep)[-1], '1.mp4') != 0:
 
                 continue
 
@@ -826,9 +819,12 @@ class SBD():
 
             [hard_segments, gra_segments] = self.get_hard_and_gra_segments()
 
+
+            # hard_segments = self.get_location(hard_segments, i)
+
             gra_segments = self.remove_invalid_segments(gra_segments, i)
             #
-            new_gra_segments = [gra_segments[0]]
+            new_gra_segments = [deepcopy(gra_segments[0])]
 
             for gra in gra_segments[1:]:
 
@@ -838,7 +834,7 @@ class SBD():
 
                 else:
 
-                    new_gra_segments.append(gra)
+                    new_gra_segments.append(deepcopy(gra))
 
             # hard_segments = self.remove_invalid_segments(hard_segments, i)
 
