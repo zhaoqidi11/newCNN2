@@ -508,14 +508,14 @@ class SBD():
 
             # print self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]), '\n'
 
-            # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
-            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 100:
+            if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
+                    0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 120:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 0.5:
+            # if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
 
             # if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
 
-            # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 2:
+            # if self.get_hist_chi_squa_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 0.5:
 
                 invalid_index.append(i)
 
@@ -537,16 +537,75 @@ class SBD():
 
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
             #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 100:
+                    # or self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
 
-            # if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 5:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
 
-            if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
+            # if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 10:
 
             # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 2:
 
                 invalid_index.append(i)
 
         return self.remove_elements_from_list(invalid_index, candidate_segments)
+
+    def remove_invalid_segments3(self, candidate_segments, video_path):
+
+        temporal_window = 8
+
+        invalid_index = []
+
+        for i in range(len(candidate_segments)):
+
+            first_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+1).zfill(6)+'.jpg'))
+
+            last_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+2*temporal_window).zfill(6)+'.jpg'))
+
+            # print self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]), '\n'
+
+            # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
+            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 100:
+                    # or self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
+
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
+
+            # if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 10:
+
+            # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 2:
+
+                invalid_index.append(i)
+
+        return self.remove_elements_from_list(invalid_index, candidate_segments)
+
+
+    def remove_invalid_segments4(self, candidate_segments, video_path):
+
+        temporal_window = 8
+
+        invalid_index = []
+
+        for i in range(len(candidate_segments)):
+
+            first_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+1).zfill(6)+'.jpg'))
+
+            last_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+2*temporal_window).zfill(6)+'.jpg'))
+
+            # print self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]), '\n'
+
+            # if 0.7*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
+            #         0.3*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
+                    # or self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
+
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
+
+            # if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 10:
+
+            # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 2:
+
+                invalid_index.append(i)
+
+        return self.remove_elements_from_list(invalid_index, candidate_segments)
+
 
 
 
@@ -592,7 +651,7 @@ class SBD():
 
         model_file = 'feature_extract.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train6_1_iter_200000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train5_3_iter_200000.caffemodel'
 
         gpu_id = '1'
 
@@ -630,41 +689,47 @@ class SBD():
 
         prob_list = {}
 
+        temp_prob = 0
+        temp_prob2 = 0
+
         for i in all_segments:
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1 and max(prob) > 0.95:
+
+            if np.argmax(prob) == 1:
 
                 # print prob,'\n'
 
-                # if len(gra_segments) > 0 and (self.if_overlap(gra_segments[-1][0], gra_segments[-1][1],
-                #                                               int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length) or int(i.split(os.sep)[-1])-gra_segments[-1][1] == 1):
-                #
-                #     gra_segments[-1][1] = int(i.split(os.sep)[-1]) + length
-                #
-                # else:
-                #
-                #     gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+                if len(gra_segments) > 0 and (self.if_overlap(gra_segments[-1][0], gra_segments[-1][1],
+                                                              int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length) or int(i.split(os.sep)[-1])-gra_segments[-1][1] == 1):
 
-                gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+                    gra_segments[-1][1] = int(i.split(os.sep)[-1]) + length
+
+                else:
+
+                    gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+
+                # gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
             elif np.argmax(prob) == 2 and max(prob) > 0.7:
 
-                print i, max(prob),'\n'
+                print i, max(prob), '\n'
                 #
-                # if len(hard_segments) > 0 and self.if_overlap(hard_segments[-1][0], hard_segments[-1][1], int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length):
-                #
-                #     hard_segments[-1][0] = int(i.split(os.sep)[-1])
-                #
-                # else:
+                if len(hard_segments) > 0 and self.if_overlap(hard_segments[-1][0], hard_segments[-1][1], int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length):
 
-                hard_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+                    hard_segments[-1][0] = int(i.split(os.sep)[-1])
+
+                else:
+
+                    hard_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
         hard_segments = [[i[0]-1, i[1]-1] for i in hard_segments]
-        gra_segments = [[i[0]-1, i[1]-1] for i in gra_segments]
+        gra_segments1 = [[i[0]-1, i[1]-1] for i in gra_segments if i[1]-i[0]==15]
+        gra_segments2 = [[i[0]-1, i[1]-1] for i in gra_segments if i[1]-i[0]==31]
+        gra_segments3 = [[i[0]-1, i[1]-1] for i in gra_segments if i[1]-i[0]>31]
 
-        return [hard_segments, gra_segments]
+        return [hard_segments, gra_segments1, gra_segments2, gra_segments3]
 
 
     def eval(self, cut, truth):
@@ -702,7 +767,7 @@ class SBD():
         for i in range(len(xmlfile)):
             if 'CUT' in xmlfile[i]:
                 hard_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
-            elif 'DIS' in xmlfile[i] or 'OTH' in xmlfile[i]:
+            elif 'DIS' in xmlfile[i] or 'OTH' in xmlfile[i] or 'FOI' in xmlfile[i]:
                 gra_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
 
         return [hard_truth, gra_truth]
@@ -721,7 +786,7 @@ class SBD():
 
         for i in videos:
 
-            if cmp(i.split(os.sep)[-1], 'BG_34901') != 0:
+            if cmp(i.split(os.sep)[-1], 'BG_14213') != 0:
                 continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
@@ -730,43 +795,38 @@ class SBD():
 
             # self.extract_features(i)
 
-            [hard_segments, gra_segments] = self.get_candidate_segments()
+            [hard_segments, gra_segments1, gra_segments2, gra_segments3] = self.get_candidate_segments()
 
             hard_segments = self.remove_invalid_segments(hard_segments, i)
 
-            gra_segments = self.remove_invalid_segments2(gra_segments, i)
+            gra_segments1 = self.remove_invalid_segments4(gra_segments1, i)
+
+            gra_segments2 = self.remove_invalid_segments3(gra_segments2, i)
+
+            gra_segments3 = self.remove_invalid_segments2(gra_segments3, i )
 
             [hard_truth, gra_truth] = self.get_labels_TRECViD(os.sep.join([labels_path, 'ref_' + i.split(os.sep)[-1] + '.xml']))
 
-            new_gra_segments = [deepcopy(gra_segments[0])]
 
-            for gra in gra_segments[1:]:
+            # new_gra_segments = self.remove_invalid_segments2(new_gra_segments, i)
 
-                if self.if_overlap(new_gra_segments[-1][0], new_gra_segments[-1][1], gra[0], gra[1]):
-
-                    new_gra_segments[-1][1] = gra[1]
-
-                else:
-
-                    new_gra_segments.append(deepcopy(gra))
-
-            new_hard_segments = [deepcopy(hard_segments[0])]
-
-            for hard in hard_segments[1:]:
-
-                if self.if_overlap(new_hard_segments[-1][0], new_hard_segments[-1][1], hard[0], hard[1]):
-
-                    new_hard_segments[-1][1] = hard[1]
-
-                else:
-
-                    new_hard_segments.append(deepcopy(hard))
+            # new_hard_segments = [deepcopy(hard_segments[0])]
+            #
+            # for hard in hard_segments[1:]:
+            #
+            #     if self.if_overlap(new_hard_segments[-1][0], new_hard_segments[-1][1], hard[0], hard[1]):
+            #
+            #         new_hard_segments[-1][1] = hard[1]
+            #
+            #     else:
+            #
+            #         new_hard_segments.append(deepcopy(hard))
 
 
 
-            self.eval(new_hard_segments, hard_truth)
+            self.eval(hard_segments, hard_truth)
 
-            self.eval(new_gra_segments, gra_truth)
+            self.eval(gra_segments1, gra_truth)
 
             end_time = time.time()
 

@@ -43,7 +43,7 @@ def Get_Data(data):
 
 if __name__ == '__main__':
 
-    with open('/home/C3D/C3D-v1.1/latest_result/logs/train5_4.log') as f:
+    with open('/home/C3D/C3D-v1.1/latest_result/logs/train7_1.log') as f:
         data1 = f.read()
 
     with open('/home/C3D/C3D-v1.1/latest_result/logs/train6_1.log') as f:
@@ -52,8 +52,8 @@ if __name__ == '__main__':
     results1 = Get_Data(data1)
     results2 = Get_Data(data2)
 
-    plt.plot(results1['train_iter_num'][3:], results1['train_loss'][3:], color='green', label='old')
-    plt.plot(results2['train_iter_num'][3:], results2['train_loss'][3:], color='red', label='new')
+    plt.plot(results1['iter_num'][3:], results1['test_loss'][3:], color='green', label='old')
+    plt.plot(results2['iter_num'][3:], results2['test_loss'][3:], color='red', label='new')
     plt.legend()
 
     plt.show()

@@ -295,9 +295,9 @@ class SBD():
 
         model_file = 'feature_extract2.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train6_1_iter_200000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train6_1_iter_220000.caffemodel'
 
-        gpu_id = '1'
+        gpu_id = '0'
 
         batch_size = '4'
 
@@ -527,9 +527,9 @@ class SBD():
             # print self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]), '\n'
 
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
-            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 110:
+            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) <10:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 15:
 
             # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) <0.5:
 
@@ -682,7 +682,7 @@ class SBD():
 
             all_candidate_segments[-1][1] = number_of_frames_in_video - 1
 
-        return all_candidate_segments, number_of_frames_in_video, all_pixels
+        return all_candidate_segments
 
 
     def eval(self, cut, truth):
@@ -757,7 +757,7 @@ class SBD():
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1:
+            if np.argmax(prob) == 1 and max(prob) > 0.7:
 
                 # print prob,'\n'
 
@@ -772,7 +772,7 @@ class SBD():
 
                 gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
-            elif np.argmax(prob) == 2 and max(prob) > 0.8:
+            elif np.argmax(prob) == 2 and max(prob) > 0.85:
 
                 print max(prob),'\n'
 
@@ -798,7 +798,7 @@ class SBD():
 
         for i in videos:
 
-            if cmp(i.split(os.sep)[-1], '1.mp4') != 0:
+            if cmp(i.split(os.sep)[-1], '10.mp4') != 0:
 
                 continue
 
@@ -815,7 +815,7 @@ class SBD():
 
             all_candidate_segments = self.get_candidate_segments2(i)
 
-            # self.extract_features(i, current_dir, all_candidate_segments)
+            self.extract_features(i, current_dir, all_candidate_segments)
 
             [hard_segments, gra_segments] = self.get_hard_and_gra_segments()
 
