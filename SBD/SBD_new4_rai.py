@@ -296,11 +296,11 @@ class SBD():
 
         model_file = 'feature_extract5.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group_1_iter_200000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group_1_iter_180000.caffemodel'
 
-        gpu_id = '1'
+        gpu_id = '0'
 
-        batch_size = '2'
+        batch_size = '4'
 
         batch_num = str(int(math.ceil(float(len(candidate_segments)) / int(batch_size))))
 
@@ -530,7 +530,7 @@ class SBD():
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
             #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 5:
 
             # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) <0.5:
 
@@ -559,7 +559,7 @@ class SBD():
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
             #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 0.2:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 0.5:
 
             # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) <0.5:
 
@@ -783,7 +783,7 @@ class SBD():
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1:
+            if np.argmax(prob) == 1 and max(prob) > 0.5:
 
                 # print prob,'\n'
 
@@ -798,7 +798,7 @@ class SBD():
 
                 gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
-            elif np.argmax(prob) == 2:
+            elif np.argmax(prob) == 2 and max(prob) > 0.8:
 
                 print max(prob),'\n'
 
@@ -824,9 +824,9 @@ class SBD():
 
         for i in videos:
 
-            if cmp(i.split(os.sep)[-1], '8.mp4') != 0:
-
-                continue
+            # if cmp(i.split(os.sep)[-1], '9.mp4') != 0:
+            #
+            #     continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
 
@@ -841,7 +841,7 @@ class SBD():
 
             all_candidate_segments = self.get_candidate_segments2(i)
 
-            # self.extract_features(i, current_dir, all_candidate_segments)
+            self.extract_features(i, current_dir, all_candidate_segments)
 
             [hard_segments, gra_segments] = self.get_hard_and_gra_segments()
 
@@ -862,7 +862,7 @@ class SBD():
 
                     new_gra_segments.append(deepcopy(gra))
 
-            hard_segments = self.remove_invalid_segments2(hard_segments, i)
+            # hard_segments = self.remove_invalid_segments2(hard_segments, i)
 
 
 
@@ -870,11 +870,11 @@ class SBD():
 
             hard_count, hard_cut, hard_t = self.eval(hard_segments, hard_truth)
 
-            result = [str(i)+'\n', str(gra_count),'\t', str(gra_cut), '\t', str(gra_t),'\n', str(hard_count), '\t', str(hard_cut), '\t', str(hard_t),'\n']
+            result = ['hard_prob_thresh: 0.8, gra_prob_thresh: 0.5, chi_squr_gra_thresh: 5,\n', str(i)+'\n', str(gra_count),'\t', str(gra_cut), '\t', str(gra_t),'\n', str(hard_count), '\t', str(hard_cut), '\t', str(hard_t),'\n']
 
-            # with open('/home/log9_remove_hard_threshold_on_prob', 'a') as f:
-            #
-            #     f.writelines(result)
+            with open('/home/new_log2', 'a') as f:
+
+                f.writelines(result)
 
             end_time = time.time()
 
