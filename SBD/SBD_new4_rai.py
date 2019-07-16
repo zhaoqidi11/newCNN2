@@ -294,13 +294,17 @@ class SBD():
 
         extract_image_features = '/home/newC3D/C3D/C3D-v1.1/build/tools/extract_image_features'
 
-        model_file = 'feature_extract5.prototxt'
+        # model_file = 'feature_extract5.prototxt'
+        #
+        # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group1/train_group_1_iter_200000.caffemodel'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group_1_iter_180000.caffemodel'
+        model_file = 'feature_extract_group_4.prototxt'
 
-        gpu_id = '0'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group4/train_group_4_iter_100000.caffemodel'
 
-        batch_size = '4'
+        gpu_id = '1'
+
+        batch_size = '6'
 
         batch_num = str(int(math.ceil(float(len(candidate_segments)) / int(batch_size))))
 
@@ -329,6 +333,10 @@ class SBD():
         d = []
 
         i_Video = cv2.VideoCapture(video_path)
+
+        if candidate_segment[0] == 7975:
+
+            print 'a'
 
         frame_first = self.get_valid_frame(i_Video, candidate_segment[0], 1)
 
@@ -715,21 +723,39 @@ class SBD():
         return all_candidate_segments
 
 
-    def eval(self, cut, truth):
+    def recall_pre_f1(self, a, b, c):
+        recall = float(a)/b if b!=0 else 0
+        precison = float(a)/c if c!=0 else 0
+        f1 = float(2*recall*precison) / (recall + precison) if (recall + precison)!=0 else 0
 
-        count = 0
+        return precison, recall, f1
 
-        for i in truth:
 
-            for j in cut:
 
-                if self.if_overlap(i[0],i[1],j[0],j[1]):
+    def get_union_cut(self, set1, set2):
 
-                    count += 1
-
+        cnt = 0
+        # tmp_set = []
+        for s1 in set1:
+            for s2 in set2:
+                if self.if_overlap(s1[0], s1[1], s2[0], s2[1]): # and s2[1] - s2[0] > 1:
+                    # tmp_set.append(s1)
+                    cnt += 1
                     break
 
-        return count,len(cut),len(truth)
+        return cnt
+
+    def eval(self, cut, cut_truth, gra, gra_truth):
+
+        cut_correct = self.get_union_cut(cut, cut_truth)
+        gra_correct = self.get_union_cut(gra, gra_truth)
+
+        all_correct = self.get_union_cut(cut+gra, cut_truth+gra_truth)
+
+        # return self.recall_pre_f1(gra_correct, len(gra), len(gra_truth)), self.recall_pre_f1(cut_correct, len(cut), len(cut_truth)), self.recall_pre_f1(all_correct, len(cut_truth+gra_truth),len(cut+gra))
+        return cut_correct, gra_correct, all_correct
+
+
 
 
 
@@ -822,9 +848,27 @@ class SBD():
 
         videos = glob(os.sep.join([path_to_video, '*.mp4']))
 
+        cut_correct = 0
+
+        gra_correct = 0
+
+        all_correct = 0
+
+        cut_t = 0
+
+        gra_t = 0
+
+        all_t = 0
+
+        cut_n = 0
+
+        gra_n = 0
+
+        all_n = 0
+
         for i in videos:
 
-            # if cmp(i.split(os.sep)[-1], '9.mp4') != 0:
+            # if cmp(i.split(os.sep)[-1], '7.mp4') != 0:
             #
             #     continue
 
@@ -846,7 +890,7 @@ class SBD():
             [hard_segments, gra_segments] = self.get_hard_and_gra_segments()
 
 
-            # hard_segments = self.get_location(hard_segments, i)
+
 
             gra_segments = self.remove_invalid_segments(gra_segments, i)
             #
@@ -864,17 +908,41 @@ class SBD():
 
             # hard_segments = self.remove_invalid_segments2(hard_segments, i)
 
+            # hard_segments = self.get_location(hard_segments, i)
 
+            # gra_count, gra_cut, gra_t  = self.eval(new_gra_segments, gra_truth)
+            #
+            # hard_count, hard_cut, hard_t = self.eval(hard_segments, hard_truth)
 
-            gra_count, gra_cut, gra_t  = self.eval(new_gra_segments, gra_truth)
+            cut_t += len(hard_truth)
+            gra_t += len(gra_truth)
+            all_t += len(hard_truth) + len(gra_truth)
 
-            hard_count, hard_cut, hard_t = self.eval(hard_segments, hard_truth)
+            cut_correct_n, gra_correct_n, all_correct_n = self.eval(hard_segments, hard_truth, new_gra_segments, gra_truth)
 
-            result = ['hard_prob_thresh: 0.8, gra_prob_thresh: 0.5, chi_squr_gra_thresh: 5,\n', str(i)+'\n', str(gra_count),'\t', str(gra_cut), '\t', str(gra_t),'\n', str(hard_count), '\t', str(hard_cut), '\t', str(hard_t),'\n']
+            cut_correct += cut_correct_n
+            gra_correct += gra_correct_n
+            all_correct += all_correct_n
 
-            with open('/home/new_log2', 'a') as f:
+            cut_n += len(hard_segments)
+            gra_n += len(new_gra_segments)
+            all_n += len(new_gra_segments+hard_segments)
 
+            result = ['video path: '+ str(i)+'\n',
+                      str(len(hard_truth))+' ' + str(cut_correct_n) + ' '+str(len(hard_segments)-cut_correct_n)+' '+str(len(hard_truth) - cut_correct_n)+'\n',
+                      str(len(gra_truth))+' ' + str(gra_correct_n) + ' '+str(len(new_gra_segments)-gra_correct_n)+' '+str(len(gra_truth) - gra_correct_n)+'\n',
+                      str(self.recall_pre_f1(gra_correct_n, len(gra_truth), len(new_gra_segments)))+'\n',
+                      str(self.recall_pre_f1(cut_correct_n, len(hard_truth), len(hard_segments)))+'\n',
+                      str(self.recall_pre_f1(all_correct_n, len(hard_segments+new_gra_segments),len(hard_truth+gra_truth)))+'\n']
+            with open ('/home/RAI_Test_log_train_group4.log', 'a') as f:
                 f.writelines(result)
+
+
+            # result = ['hard_prob_thresh: 0.8, gra_prob_thresh: 0.5, chi_squr_gra_thresh: 5,\n', str(i)+'\n', str(gra_count),'\t', str(gra_cut), '\t', str(gra_t),'\n', str(hard_count), '\t', str(hard_cut), '\t', str(hard_t),'\n']
+            #
+            # with open('/home/new_log4', 'a') as f:
+            #
+            #     f.writelines(result)
 
             end_time = time.time()
 

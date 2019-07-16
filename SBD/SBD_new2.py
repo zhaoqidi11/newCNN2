@@ -540,7 +540,7 @@ class SBD():
 
             # if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 5:
 
-            if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
+            if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
 
             # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 2:
 
@@ -588,13 +588,13 @@ class SBD():
 
 
 
-        extract_image_features = '/home/C3D/C3D-v1.1/build/tools/extract_image_features'
+        extract_image_features = '/home/newC3D/C3D/C3D-v1.1/build/tools/extract_image_features'
 
-        model_file = 'feature_extract3.prototxt'
+        model_file = 'feature_extract_img.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train7_1_iter_240000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group1/train_group_1_iter_200000.caffemodel'
 
-        gpu_id = '1'
+        gpu_id = '0'
 
         batch_size = '4'
 
@@ -634,7 +634,7 @@ class SBD():
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1 and max(prob) > 0.9:
+            if np.argmax(prob) == 1 and max(prob) > 0.8:
 
                 # print prob,'\n'
 
@@ -651,15 +651,15 @@ class SBD():
 
             elif np.argmax(prob) == 2 and max(prob) > 0.8:
 
-                print i, max(prob),'\n'
+                # print i, max(prob),'\n'
                 #
-                # if len(hard_segments) > 0 and self.if_overlap(hard_segments[-1][0], hard_segments[-1][1], int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length):
-                #
-                #     hard_segments[-1][0] = int(i.split(os.sep)[-1])
-                #
-                # else:
+                if len(hard_segments) > 0 and self.if_overlap(hard_segments[-1][0], hard_segments[-1][1], int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length):
 
-                hard_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+                    hard_segments[-1][0] = int(i.split(os.sep)[-1])
+
+                else:
+
+                    hard_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
         hard_segments = [[i[0]-1, i[1]-1] for i in hard_segments]
         gra_segments = [[i[0]-1, i[1]-1] for i in gra_segments]
@@ -667,24 +667,35 @@ class SBD():
         return [hard_segments, gra_segments]
 
 
-    def eval(self, cut, truth):
+    def recall_pre_f1(self, a, b, c):
+        recall = float(a)/b if b!=0 else 0
+        precison = float(a)/c if c!=0 else 0
+        f1 = float(2*recall*precison) / (recall + precison)
 
-        count = 0
+        return precison, recall, f1
 
-        for i in truth:
 
-            for j in cut:
 
-                if self.if_overlap(i[0],i[1],j[0],j[1]):
+    def get_union_cut(self, set1, set2):
 
-                    count += 1
-
+        cnt = 0
+        for s1 in set1:
+            for s2 in set2:
+                if self.if_overlap(s1[0], s1[1], s2[0], s2[1]):
+                    cnt += 1
                     break
 
-        return count
+        return cnt
 
+    def eval(self, cut, cut_truth, gra, gra_truth):
 
+        cut_correct = self.get_union_cut(cut, cut_truth)
+        gra_correct = self.get_union_cut(gra, gra_truth)
 
+        all_correct = self.get_union_cut(cut+gra, cut_truth+gra_truth)
+
+        # return self.recall_pre_f1(gra_correct, len(gra), len(gra_truth)), self.recall_pre_f1(cut_correct, len(cut), len(cut_truth)), self.recall_pre_f1(all_correct, len(cut_truth+gra_truth),len(cut+gra))
+        return cut_correct, gra_correct, all_correct
 
     def get_labels_TRECViD(self, label_path):
 
@@ -698,7 +709,7 @@ class SBD():
         for i in range(len(xmlfile)):
             if 'CUT' in xmlfile[i]:
                 hard_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
-            elif 'DIS' in xmlfile[i] or 'OTH' in xmlfile[i]:
+            elif 'DIS' in xmlfile[i] or 'OTH' in xmlfile[i] or 'FOI' in xmlfile[i]:
                 gra_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
 
         return [hard_truth, gra_truth]
@@ -715,16 +726,34 @@ class SBD():
 
         labels_path = '/home/t2007ref'
 
+        cut_correct = 0
+
+        gra_correct = 0
+
+        all_correct = 0
+
+        cut_t = 0
+
+        gra_t = 0
+
+        all_t = 0
+
+        cut_n = 0
+
+        gra_n = 0
+
+        all_n = 0
+
         for i in videos:
 
-            if cmp(i.split(os.sep)[-1], 'BG_2408') != 0:
-                continue
+            # if cmp(i.split(os.sep)[-1], 'BG_34901') != 0:
+            #     continue
 
             print 'Now', i.split(os.sep)[-1], ' is analyasing...'
 
             begin_time = time.time()
 
-            # self.extract_features(i)
+            self.extract_features(i)
 
             [hard_segments, gra_segments] = self.get_candidate_segments()
 
@@ -760,15 +789,40 @@ class SBD():
 
 
 
-            self.eval(new_hard_segments, hard_truth)
+            # self.eval(new_hard_segments, hard_truth)
+            #
+            # self.eval(new_gra_segments, gra_truth)
 
-            self.eval(new_gra_segments, gra_truth)
+            # print self.eval(new_hard_segments, hard_truth, new_gra_segments, gra_truth)
+
+            cut_t += len(hard_truth)
+            gra_t += len(gra_truth)
+            all_t += len(hard_truth) + len(gra_truth)
+
+            cut_correct_n, gra_correct_n, all_correct_n = self.eval(new_hard_segments, hard_truth, new_gra_segments, gra_truth)
+
+            cut_correct += cut_correct_n
+            gra_correct += gra_correct_n
+            all_correct += all_correct_n
+
+            cut_n += len(new_hard_segments)
+            gra_n += len(new_gra_segments)
+            all_n += len(new_gra_segments+new_hard_segments)
+
+            result = [str(i)+'\n',str(len(hard_truth))+' ' + str(cut_correct_n) + ' '+str(len(new_hard_segments)-cut_correct_n)+' '+str(len(hard_truth) - cut_correct_n)+'\n',
+                      str(len(gra_truth))+' ' + str(gra_correct_n) + ' '+str(len(new_gra_segments)-gra_correct_n)+' '+str(len(gra_truth) - gra_correct_n)+'\n',
+                      str(self.recall_pre_f1(gra_correct_n, len(gra_truth), len(new_gra_segments)))+'\n',
+                      str(self.recall_pre_f1(cut_correct_n, len(hard_truth), len(new_hard_segments)))+'\n',
+                      str(self.recall_pre_f1(all_correct_n, len(new_hard_segments+new_gra_segments),len(hard_truth+gra_truth)))+'\n']
+            with open ('/home/TRECVID_Test_log.log', 'a') as f:
+                f.writelines(result)
 
             end_time = time.time()
 
             print 'the cost of time is ', str(end_time - begin_time), '\n'
 
-
+        with open('/home/TRECVID_Test_log.log', 'a') as f:
+            f.writelines(['all_results:\n',str(self.recall_pre_f1(gra_correct, gra_t, gra_n))+'\n',str(self.recall_pre_f1(cut_correct, cut_t, cut_n))+'\n', str(self.recall_pre_f1(all_correct, all_t, all_n))])
 
 if  __name__ == '__main__':
 

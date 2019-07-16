@@ -244,7 +244,7 @@ class SBD():
 
     def generate_tmp_images(self, current_dir, video_path, candidate_segments):
 
-        tmp_folder_path = os.sep.join([current_dir, 'tmp'])
+        tmp_folder_path = os.sep.join([current_dir, 'tmp2'])
 
         self.mkdir(tmp_folder_path)
 
@@ -292,11 +292,11 @@ class SBD():
         #
         # temp_out_folder_list_path = '/home/CNN2/SBD/tmp/output.list'
 
-        extract_image_features = '/home/C3D/C3D-v1.1/build/tools/extract_image_features'
+        extract_image_features = '/home/newC3D/C3D/C3D-v1.1/build/tools/extract_image_features'
 
-        model_file = 'feature_extract2.prototxt'
+        model_file = 'feature_extract_group_3.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train6_1_iter_220000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/old/train_group_1_iter_200000.caffemodel'
 
         gpu_id = '0'
 
@@ -762,7 +762,7 @@ class SBD():
 
         length = 15
 
-        tmp_folder = '/home/CNN2/SBD/tmp'
+        tmp_folder = '/home/CNN2/SBD/tmp2'
 
         tmp_have_been_extracted_feature_list = os.sep.join([tmp_folder, 'output.list'])
 
