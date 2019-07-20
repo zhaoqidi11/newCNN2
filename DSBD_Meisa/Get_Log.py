@@ -5,7 +5,7 @@ import re
 # with open('/home/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/TrainLog26.log') as f:
 #     data = f.read()
 
-with open('/home/C3D/C3D-v1.1/latest_result/logs/new_train_group4_2.log') as f:
+with open('/home/C3D/C3D-v1.1/latest_result/logs/new_train_pool_pad_5.log') as f:
     data = f.read()
 
 # pattern = re.compile(r'''

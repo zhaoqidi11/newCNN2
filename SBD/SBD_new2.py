@@ -590,6 +590,10 @@ class SBD():
 
         extract_image_features = '/home/newC3D/C3D/C3D-v1.1/build/tools/extract_image_features'
 
+        # model_file = 'feature_extract_img.prototxt'
+        #
+        # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group1/train_group_1_iter_200000.caffemodel'
+
         model_file = 'feature_extract_img.prototxt'
 
         caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group1/train_group_1_iter_200000.caffemodel'

@@ -292,19 +292,19 @@ class SBD():
         #
         # temp_out_folder_list_path = '/home/CNN2/SBD/tmp/output.list'
 
-        extract_image_features = '/home/newC3D/C3D/C3D-v1.1/build/tools/extract_image_features'
+        extract_image_features = '/home/newC3D2/C3D/C3D-v1.1/build/tools/extract_image_features'
 
         # model_file = 'feature_extract5.prototxt'
         #
         # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group1/train_group_1_iter_200000.caffemodel'
 
-        model_file = 'feature_extract_group_4.prototxt'
+        model_file = 'feature_extract_pool_pad.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group4/train_group_4_iter_100000.caffemodel'
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group4/train_group_pool_pad_2_iter_60000.caffemodel'
 
         gpu_id = '1'
 
-        batch_size = '6'
+        batch_size = '24'
 
         batch_num = str(int(math.ceil(float(len(candidate_segments)) / int(batch_size))))
 
@@ -435,7 +435,10 @@ class SBD():
     def process_invalid_frame(self, ret, frame, index, sign, i_video):
 
         temp_i = index + sign
-        while ret is False:
+
+        num = i_video.get(7)
+
+        while ret is False and temp_i<num:
             i_video.set(1, temp_i)
             ret, frame = i_video.read()
             temp_i += sign
@@ -533,12 +536,16 @@ class SBD():
 
             last_frame = self.get_valid_frame(i_Video, candidate_segments[i][1], -1)
 
+            if first_frame is None or last_frame is None:
+
+                continue
+
             # print self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]), '\n'
 
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
             #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 5:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
 
             # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) <0.5:
 
@@ -747,10 +754,10 @@ class SBD():
 
     def eval(self, cut, cut_truth, gra, gra_truth):
 
-        cut_correct = self.get_union_cut(cut, cut_truth)
-        gra_correct = self.get_union_cut(gra, gra_truth)
+        cut_correct = self.get_union_cut(cut_truth, cut)
+        gra_correct = self.get_union_cut(gra_truth, gra)
 
-        all_correct = self.get_union_cut(cut+gra, cut_truth+gra_truth)
+        all_correct = self.get_union_cut(cut_truth+gra_truth, cut+gra)
 
         # return self.recall_pre_f1(gra_correct, len(gra), len(gra_truth)), self.recall_pre_f1(cut_correct, len(cut), len(cut_truth)), self.recall_pre_f1(all_correct, len(cut_truth+gra_truth),len(cut+gra))
         return cut_correct, gra_correct, all_correct
@@ -809,7 +816,7 @@ class SBD():
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1 and max(prob) > 0.5:
+            if np.argmax(prob) == 1:# and max(prob) > 0.5:
 
                 # print prob,'\n'
 
@@ -824,7 +831,7 @@ class SBD():
 
                 gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
-            elif np.argmax(prob) == 2 and max(prob) > 0.8:
+            elif np.argmax(prob) == 2 and max(prob) > 0.7:
 
                 print max(prob),'\n'
 
@@ -866,9 +873,11 @@ class SBD():
 
         all_n = 0
 
+        log_file_path = '/home/RAI_Test_log_pool_pad_2_60000.log'
+
         for i in videos:
 
-            # if cmp(i.split(os.sep)[-1], '7.mp4') != 0:
+            # if cmp(i.split(os.sep)[-1], '8.mp4') != 0:
             #
             #     continue
 
@@ -922,21 +931,18 @@ class SBD():
 
             cut_correct += cut_correct_n
             gra_correct += gra_correct_n
-            all_correct += all_correct_n
+            all_correct += cut_correct_n+gra_correct_n
 
             cut_n += len(hard_segments)
             gra_n += len(new_gra_segments)
             all_n += len(new_gra_segments+hard_segments)
 
-            result = ['video path: '+ str(i)+'\n',
-                      str(len(hard_truth))+' ' + str(cut_correct_n) + ' '+str(len(hard_segments)-cut_correct_n)+' '+str(len(hard_truth) - cut_correct_n)+'\n',
-                      str(len(gra_truth))+' ' + str(gra_correct_n) + ' '+str(len(new_gra_segments)-gra_correct_n)+' '+str(len(gra_truth) - gra_correct_n)+'\n',
-                      str(self.recall_pre_f1(gra_correct_n, len(gra_truth), len(new_gra_segments)))+'\n',
-                      str(self.recall_pre_f1(cut_correct_n, len(hard_truth), len(hard_segments)))+'\n',
-                      str(self.recall_pre_f1(all_correct_n, len(hard_segments+new_gra_segments),len(hard_truth+gra_truth)))+'\n']
-            with open ('/home/RAI_Test_log_train_group4.log', 'a') as f:
-                f.writelines(result)
+            result = ['hard_prob_thresh: 0.7, gra_prob_thresh: None, chi_squr_gra_thresh: 2,\n', str(i) + '\n',
+                      str(gra_correct_n), '\t', str(len(new_gra_segments)), '\t', str(len(gra_truth)), '\n', str(cut_correct_n), '\t', str(len(hard_segments)),
+                      '\t', str(len(hard_truth)), '\n']
 
+            with open (log_file_path, 'a') as f:
+                f.writelines(result)
 
             # result = ['hard_prob_thresh: 0.8, gra_prob_thresh: 0.5, chi_squr_gra_thresh: 5,\n', str(i)+'\n', str(gra_count),'\t', str(gra_cut), '\t', str(gra_t),'\n', str(hard_count), '\t', str(hard_cut), '\t', str(hard_t),'\n']
             #
@@ -947,6 +953,12 @@ class SBD():
             end_time = time.time()
 
             print 'the cost of time is ', str(end_time - begin_time), '\n'
+
+        result = ['All: ', str(self.recall_pre_f1(all_correct, all_t, all_n))]
+
+        with open(log_file_path, 'a') as f:
+
+            f.writelines(result)
 
 
 
