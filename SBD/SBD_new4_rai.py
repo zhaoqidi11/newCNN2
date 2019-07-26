@@ -298,13 +298,17 @@ class SBD():
         #
         # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group1/train_group_1_iter_200000.caffemodel'
 
-        model_file = 'feature_extract_pool_pad.prototxt'
+        # model_file = 'feature_extract_pool_pad.prototxt'
+        #
+        # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group4/train_group_pool_pad_2_iter_60000.caffemodel'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group4/train_group_pool_pad_2_iter_60000.caffemodel'
+        model_file = 'feature_extract_deep_train_group_pool_pad.prototxt'
+
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/deep_train_group_pool_pad/deep_train_group_pool_pad_iter_24000.caffemodel'
 
         gpu_id = '1'
 
-        batch_size = '24'
+        batch_size = '32'
 
         batch_num = str(int(math.ceil(float(len(candidate_segments)) / int(batch_size))))
 
@@ -816,7 +820,7 @@ class SBD():
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1:# and max(prob) > 0.5:
+            if np.argmax(prob) == 1:
 
                 # print prob,'\n'
 
@@ -873,11 +877,11 @@ class SBD():
 
         all_n = 0
 
-        log_file_path = '/home/RAI_Test_log_pool_pad_2_60000.log'
+        log_file_path = '/home/C3D/C3D-v1.1/latest_result/models/deep_train_group_pool_pad/RAI_Test_log_deep_train_group_pool_pad_24000.log'
 
         for i in videos:
 
-            # if cmp(i.split(os.sep)[-1], '8.mp4') != 0:
+            # if cmp(i.split(os.sep)[-1], '9.mp4') != 0:
             #
             #     continue
 

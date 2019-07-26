@@ -5,7 +5,7 @@ import re
 # with open('/home/C3D/C3D-v1.1/examples/c3d_ucf101_finetuning/TrainLog26.log') as f:
 #     data = f.read()
 
-with open('/home/C3D/C3D-v1.1/latest_result/logs/new_train_pool_pad_5.log') as f:
+with open('/home/C3D/C3D-v1.1/latest_result/models/new_train_group/new_train_group_2.log') as f:
     data = f.read()
 
 # pattern = re.compile(r'''
@@ -57,6 +57,6 @@ plt.plot(iter_num, test_loss)
 plt.subplot(312)
 plt.plot(iter_num, test_ac)
 plt.subplot(313)
-plt.plot(train_iter_num[20:], train_loss[20:])
+plt.plot(train_iter_num, train_loss)
 
 plt.show()

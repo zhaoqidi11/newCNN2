@@ -1,3 +1,4 @@
+
 from glob2 import glob
 import sys
 
@@ -31,7 +32,7 @@ class SBD():
     # Get the Manhattan Distance
     def get_hist_manh_diff(self, frame1, frame2, allpixels):
 
-        bins_number = 32
+        bins_number = 64
 
         [B_frame1_hist, G_frame1_hist, R_frame1_hist] = self.get_frame_hist(frame1, bins_number)
         [B_frame2_hist, G_frame2_hist, R_frame2_hist] = self.get_frame_hist(frame2, bins_number)
@@ -50,7 +51,16 @@ class SBD():
                cv2.compareHist(G_frame1_hist, G_frame2_hist, method=cv2.HISTCMP_CHISQR) + \
                cv2.compareHist(R_frame1_hist, R_frame2_hist, method=cv2.HISTCMP_CHISQR))/allpixels
 
+    def compute_bhattacharyya_dis(self, frame1, frame2, allpixels):
 
+        bins_number = 64
+
+        [B_frame1_hist, G_frame1_hist, R_frame1_hist] = self.get_frame_hist(frame1, bins_number)
+        [B_frame2_hist, G_frame2_hist, R_frame2_hist] = self.get_frame_hist(frame2, bins_number)
+
+        return (-np.log(np.sum(np.sqrt(B_frame1_hist*B_frame2_hist))) - \
+                np.log(np.sum(np.sqrt(G_frame1_hist*G_frame2_hist))) - \
+                np.log(np.sum(np.sqrt(R_frame1_hist*R_frame2_hist)))) / allpixels
 
     def if_overlap(self, begin1, end1, begin2, end2):
 
@@ -181,34 +191,6 @@ class SBD():
        return candidate_segments_label
 
 
-
-
-
-
-
-
-
-    def generate_images_sequence(self, tmp_folder_path, video_path, C3D_segments):
-
-
-        for i in C3D_segments:
-
-            index = i[0]
-
-            save_path = os.sep.join([tmp_folder_path, str(index+1).zfill(6)])
-
-            os.mkdir(save_path)
-
-            while index < i[1]:
-
-                cv2.imwrite(os.sep.join([save_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(video_path, index))
-
-                index += 1
-
-            cv2.imwrite(os.sep.join([save_path, '.'.join([str(i[1]+1).zfill(6), 'jpg'])]), self.get_valid_frame(video_path, i[1]))
-
-
-
     def generate_candidate_segments_to_C3D(self, candidate_segments, num_of_frames_in_video, number):
 
         length = (candidate_segments[0][1] - candidate_segments[0][0]) / 2
@@ -249,15 +231,41 @@ class SBD():
         else:
             os.mkdir(path)
 
-    def get_candidate_segments_image(self, current_dir, video_path, candidate_segments, number_of_frames_in_video):
+    def generate_images_sequence(self, tmp_folder_path, video_path, candidate_segments):
 
-        temp_folder_path = os.sep.join([current_dir , 'tmp_video_images'])
+        i_video = cv2.VideoCapture(video_path)
 
-        temp_out_folder_path = os.sep.join([current_dir , 'tmp_out_video_images'])
+        for i in candidate_segments:
 
-        temp_folder_list_path = os.sep.join([current_dir , 'tmp_list.prefix'])
+            index = i[0]
 
-        temp_out_folder_list_path = os.sep.join([current_dir , 'tmp_output_list.list'])
+            save_path = os.sep.join([tmp_folder_path, str(index+1).zfill(6)])
+
+            os.mkdir(save_path)
+
+            while index < i[1]:
+
+                cv2.imwrite(os.sep.join([save_path, '.'.join([str(index+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, index, 1))
+
+                index += 1
+
+            cv2.imwrite(os.sep.join([save_path, '.'.join([str(i[1]+1).zfill(6), 'jpg'])]), self.get_valid_frame(i_video, i[1], -1))
+
+    def create_tmp_folders(self, current_dir, video_path, candidate_segments):
+
+        tmp_folder_path = os.sep.join([current_dir, 'tmp2'])
+
+        self.mkdir(tmp_folder_path)
+
+        # save images extracted from video
+
+        temp_folder_path = os.sep.join([tmp_folder_path, 'tmp_video_images'])
+
+        temp_out_folder_path = os.sep.join([tmp_folder_path, 'tmp_out_video_images'])
+
+        temp_folder_list_path = os.sep.join([tmp_folder_path, 'to_be_extracted.list'])
+
+        temp_out_folder_list_path = os.sep.join([tmp_folder_path, 'output.list'])
 
         self.mkdir(temp_folder_path)
         self.mkdir(temp_out_folder_path)
@@ -267,17 +275,15 @@ class SBD():
         if os.path.exists(temp_out_folder_list_path):
             os.remove(temp_out_folder_list_path)
 
-        # C3D_segments = self.generate_candidate_segments_to_C3D(candidate_segments, number_of_frames_in_video, 3)
-
-        self.generate_images_sequence(temp_folder_path, video_path, candidate_segments)
+        # self.generate_images_sequence(temp_folder_path, video_path, candidate_segments)
 
         temp_list = []
         temp_out_list = []
 
         for i in candidate_segments:
 
-            temp_list.append(' '.join([os.sep.join([temp_folder_path, str(i[0]+1).zfill(6), '']), str(i[0]+1), '0']) + '\n')
-            temp_out_list.append(os.sep.join([temp_out_folder_path, str(i[0]+1).zfill(6),str(i[0]+1).zfill(6)]) + '\n')
+            temp_list.append(' '.join([video_path, str(i[0]), '0']) + '\n')
+            temp_out_list.append(os.sep.join([tmp_folder_path, str(i[0]).zfill(6)]) + '\n')
 
         with open(temp_folder_list_path, 'w') as f:
             f.writelines(temp_list)
@@ -285,7 +291,32 @@ class SBD():
         with open(temp_out_folder_list_path, 'w') as f:
             f.writelines(temp_out_list)
 
-        return candidate_segments
+        return temp_folder_list_path, temp_out_folder_list_path
+
+    # Extract the feature from videos through C3D
+    def extract_features(self, video_path, current_dir, candidate_segments):
+
+        temp_folder_list_path, temp_out_folder_list_path =self.create_tmp_folders(current_dir, video_path, candidate_segments)
+
+        extract_image_features = '/home/newC3D2/C3D/C3D-v1.1/build/tools/extract_image_features'
+
+        model_file = 'feature_extract_pool_pad.prototxt'
+
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group_pool_pad/train_group_pool_pad_iter_45000.caffemodel'
+
+        gpu_id = '1'
+
+        batch_size = '20'
+
+        batch_num = str(int(math.ceil(float(len(candidate_segments)) / int(batch_size))))
+
+        # feature1 = 'fc8-new'
+
+        feature = 'prob'
+
+        shell = ' '.join(['GLOG_logtostderr=1', extract_image_features, model_file, caffemodel, gpu_id, batch_size, batch_num, temp_out_folder_list_path, feature])
+
+        os.system(shell)
 
     def detect_gra(self, candidate_segment):
 
@@ -299,18 +330,24 @@ class SBD():
 
             print 'a'
 
-    def detect_hard(self, candidate_segment, video_path, all_pixels):
+    def detect_hard(self, candidate_segment, video_path):
 
         d = []
 
-        frame_first = self.get_valid_frame(video_path, candidate_segment[0])
+        i_Video = cv2.VideoCapture(video_path)
+
+        if candidate_segment[0] == 7975:
+
+            print 'a'
+
+        frame_first = self.get_valid_frame(i_Video, candidate_segment[0], 1)
 
 
         for i in range(candidate_segment[0]+1,candidate_segment[1]):
 
-            frame_next = self.get_valid_frame(video_path, i)
+            frame_next = self.get_valid_frame(i_Video, i, -1)
 
-            d.append(0.5 * self.get_hist_chi_squa_diff(frame_first, frame_next, all_pixels) + 0.5 * self.get_pixel_diff(frame_first, frame_next, all_pixels))
+            d.append(0.5 * self.get_hist_chi_squa_diff(frame_first, frame_next, frame_first.shape[0] * frame_first.shape[1]) + 0.5 * self.get_pixel_diff(frame_first, frame_next, frame_first.shape[0] * frame_first.shape[1]))
 
             frame_first = copy.deepcopy(frame_next)
 
@@ -378,25 +415,15 @@ class SBD():
 
 
 
-    def get_location(self, candidate_segments, candidate_segments_label, video_path, all_pixels, hard_truth):
+    def get_location(self, candidate_segments, video_path):
 
-        [new_candidate_segments, new_candidate_segments_label] = self.valid_candidate_segments(candidate_segments, candidate_segments_label)
 
         hard_cut = []
 
-        gra_cut = []
 
+        for i in range(len(candidate_segments)):
 
-
-        for i in range(len(new_candidate_segments)):
-
-            if new_candidate_segments_label[i] == 1:
-
-                print "This is a gradual segment\n"
-
-            else:
-
-                hard_cut.append(self.detect_hard(new_candidate_segments[i], video_path, all_pixels))
+            hard_cut.append(self.detect_hard(candidate_segments[i], video_path))
 
 
         return hard_cut
@@ -410,19 +437,22 @@ class SBD():
     def process_invalid_frame(self, ret, frame, index, sign, i_video):
 
         temp_i = index + sign
-        while ret is False:
+
+        num = i_video.get(7)
+
+        while ret is False and temp_i<num:
             i_video.set(1, temp_i)
             ret, frame = i_video.read()
             temp_i += sign
         return frame
 
-    def get_valid_frame(self, frames_path, index):
-
-        suffix = 'jpg'
-
-        frame = cv2.imread(os.sep.join([frames_path, '.'.join([str(index), suffix])]))
-
-        return frame
+    def get_valid_frame(self, i_video, index, sign):
+        i_video.set(1, index)
+        ret, frame = i_video.read()
+        if ret:
+            return frame
+        else:
+            return self.process_invalid_frame(ret, frame, index, sign, i_video)
 
 
     def get_candidate_segments_label(self, candidate_segments, hard_truth, gra_truth):
@@ -500,22 +530,24 @@ class SBD():
 
         invalid_index = []
 
+        i_Video = cv2.VideoCapture(video_path)
+
         for i in range(len(candidate_segments)):
 
-            first_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+1).zfill(6)+'.jpg'))
+            first_frame = self.get_valid_frame(i_Video, candidate_segments[i][0], 1)
 
-            last_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+2*temporal_window).zfill(6)+'.jpg'))
+            last_frame = self.get_valid_frame(i_Video, candidate_segments[i][1], -1)
+
+            if first_frame is None or last_frame is None:
+
+                continue
 
             # print self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]), '\n'
 
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
-            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 100:
+            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 0.5:
-
-            # if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
-
-            # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 2:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
 
                 invalid_index.append(i)
 
@@ -527,92 +559,109 @@ class SBD():
 
         invalid_index = []
 
+        i_Video = cv2.VideoCapture(video_path)
+
         for i in range(len(candidate_segments)):
 
-            first_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+1).zfill(6)+'.jpg'))
+            first_frame = self.get_valid_frame(i_Video, candidate_segments[i][0], 1)
 
-            last_frame = cv2.imread(os.path.join(video_path, str(candidate_segments[i][0]/temporal_window + 1).zfill(6), str(candidate_segments[i][0]+2*temporal_window).zfill(6)+'.jpg'))
+            last_frame = self.get_valid_frame(i_Video, candidate_segments[i][1], -1)
 
             # print self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]), '\n'
 
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
-            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 100:
+            #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
 
-            # if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 5:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 0.5:
 
-            if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
+            # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) <0.5:
 
-            # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) < 2:
+            # if self.get_hist_manh_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 1:
 
                 invalid_index.append(i)
 
         return self.remove_elements_from_list(invalid_index, candidate_segments)
 
+    def generate_candidate_segments(self, video_path):
 
+        i_video = cv2.VideoCapture(video_path)
 
-
-
-
-    def extract_features(self, VideoPath):
-
-        suffix = '*.jpg'
-
-        all_group = range(1,len(glob(os.sep.join([VideoPath, '*']))) + 1)
+        number_of_frames_in_video = int(i_video.get(7))
 
         temporal_window = 8
 
-        tmp_folder = '/home/CNN2/SBD/tmp2'
+        candidate_segments = []
 
-        tmp_feature_folder = os.sep.join([tmp_folder, 'feature'])
+        group_number = 1 + (number_of_frames_in_video - 2 * temporal_window) / temporal_window
 
-        tmp_to_be_extracted_feature_list = os.sep.join([tmp_folder, 'to_be_extracted.list'])
+        for i in range(group_number):
 
-        tmp_have_been_extracted_feature_list = os.sep.join([tmp_folder, 'output.list'])
+            candidate_segments.append([i * temporal_window, i * temporal_window + 2 * temporal_window - 1])
 
-        self.mkdir(tmp_folder)
-
-        self.mkdir(tmp_feature_folder)
-
-        all_group_list = [' '.join([os.path.join(VideoPath, str(i).zfill(6)), str((i-1)*temporal_window + 1).zfill(6), '0\n']) for i in all_group]
-
-        all_group_output = [os.path.join(tmp_feature_folder, str((i-1)*temporal_window + 1).zfill(6))+'\n' for i in all_group]
+        return candidate_segments
 
 
-        with open(tmp_to_be_extracted_feature_list, 'w') as f:
+    def recall_pre_f1(self, a, b, c):
+        recall = float(a)/b if b!=0 else 0
+        precison = float(a)/c if c!=0 else 0
+        f1 = float(2*recall*precison) / (recall + precison) if (recall + precison)!=0 else 0
 
-            f.writelines(all_group_list)
-
-        with open(tmp_have_been_extracted_feature_list, 'w') as f:
-
-            f.writelines(all_group_output)
+        return precison, recall, f1
 
 
 
-        extract_image_features = '/home/newC3D2/C3D/C3D-v1.1/build/tools/extract_image_features'
+    def get_union_cut(self, set1, set2):
 
-        # model_file = 'feature_extract_img.prototxt'
-        #
-        # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group1/train_group_1_iter_200000.caffemodel'
+        cnt = 0
+        # tmp_set = []
+        for s1 in set1:
+            for s2 in set2:
+                if self.if_overlap(s1[0], s1[1], s2[0], s2[1]): # and s2[1] - s2[0] > 1:
+                    # tmp_set.append(s1)
+                    cnt += 1
+                    break
 
-        model_file = 'feature_extract_pre3_img.prototxt'
+        return cnt
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/pre_train_group_pool_pad3_iter_60000.caffemodel'
+    def eval(self, cut, cut_truth, gra, gra_truth):
 
-        gpu_id = '0'
+        cut_correct = self.get_union_cut(cut_truth, cut)
+        gra_correct = self.get_union_cut(gra_truth, gra)
 
-        batch_size = '20'
+        all_correct = self.get_union_cut(cut_truth+gra_truth, cut+gra)
 
-        batch_num = str(int(math.ceil(float(len(all_group)) / int(batch_size))))
+        # return self.recall_pre_f1(gra_correct, len(gra), len(gra_truth)), self.recall_pre_f1(cut_correct, len(cut), len(cut_truth)), self.recall_pre_f1(all_correct, len(cut_truth+gra_truth),len(cut+gra))
+        return cut_correct, gra_correct, all_correct
 
-        feature1 = 'fc8-new'
 
-        feature2 = 'prob'
 
-        shell = ' '.join(['GLOG_logtostderr=1', extract_image_features, model_file, caffemodel, gpu_id, batch_size, batch_num, tmp_have_been_extracted_feature_list, feature1, feature2])
 
-        os.system(shell)
 
-    def get_candidate_segments(self):
+
+    def get_labels_rai(self, label_path):
+
+        hard_truth = []
+        gra_truth = []
+
+        with open(label_path) as f:
+            all_lines = f.readlines()
+
+        ground_truth = [[int(all_lines[0].strip().split('\t')[1])]]
+
+        for i in range(1, len(all_lines) - 1):
+            ground_truth[-1].extend([int(all_lines[i].strip().split('\t')[0])])
+            ground_truth.append([int(all_lines[i].strip().split('\t')[1])])
+        ground_truth[-1].extend([int(all_lines[-1].strip().split('\t')[0])])
+
+        for i in ground_truth:
+            if i[1]-i[0] == 1:
+                hard_truth.append(i)
+            else:
+                gra_truth.append(i)
+
+        return [hard_truth, gra_truth]
+
+    def get_hard_and_gra_segments(self):
 
         length = 15
 
@@ -638,25 +687,12 @@ class SBD():
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1 and max(prob) > 0.8:
-
-                # print prob,'\n'
-
-                # if len(gra_segments) > 0 and (self.if_overlap(gra_segments[-1][0], gra_segments[-1][1],
-                #                                               int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length) or int(i.split(os.sep)[-1])-gra_segments[-1][1] == 1):
-                #
-                #     gra_segments[-1][1] = int(i.split(os.sep)[-1]) + length
-                #
-                # else:
-                #
-                #     gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+            if np.argmax(prob) == 1:
 
                 gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
-            elif np.argmax(prob) == 2 and max(prob) > 0.8:
+            elif np.argmax(prob) == 2 and max(prob) > 0.7:
 
-                # print i, max(prob),'\n'
-                #
                 if len(hard_segments) > 0 and self.if_overlap(hard_segments[-1][0], hard_segments[-1][1], int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length):
 
                     hard_segments[-1][0] = int(i.split(os.sep)[-1])
@@ -665,70 +701,16 @@ class SBD():
 
                     hard_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
-        hard_segments = [[i[0]-1, i[1]-1] for i in hard_segments]
-        gra_segments = [[i[0]-1, i[1]-1] for i in gra_segments]
 
         return [hard_segments, gra_segments]
 
-
-    def recall_pre_f1(self, a, b, c):
-        recall = float(a)/b if b!=0 else 0
-        precison = float(a)/c if c!=0 else 0
-        f1 = float(2*recall*precison) / (recall + precison) if (recall + precison)!=0 else 0
-
-        return precison, recall, f1
-
-
-
-    def get_union_cut(self, set1, set2):
-
-        cnt = 0
-        for s1 in set1:
-            for s2 in set2:
-                if self.if_overlap(s1[0], s1[1], s2[0], s2[1]):
-                    cnt += 1
-                    break
-
-        return cnt
-
-    def eval(self, cut, cut_truth, gra, gra_truth):
-
-        cut_correct = self.get_union_cut(cut, cut_truth)
-        gra_correct = self.get_union_cut(gra, gra_truth)
-
-        all_correct = self.get_union_cut(cut+gra, cut_truth+gra_truth)
-
-        # return self.recall_pre_f1(gra_correct, len(gra), len(gra_truth)), self.recall_pre_f1(cut_correct, len(cut), len(cut_truth)), self.recall_pre_f1(all_correct, len(cut_truth+gra_truth),len(cut+gra))
-        return cut_correct, gra_correct, all_correct
-
-    def get_labels_TRECViD(self, label_path):
-
-        hard_truth = []
-        gra_truth = []
-
-        with open(label_path) as f:
-
-            xmlfile = f.readlines()
-
-        for i in range(len(xmlfile)):
-            if 'CUT' in xmlfile[i]:
-                hard_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
-            elif 'DIS' in xmlfile[i] or 'OTH' in xmlfile[i] or 'FOI' in xmlfile[i]:
-                gra_truth.append([int(xmlfile[i].split('"')[-4]), int(xmlfile[i].split('"')[-2])])
-
-        return [hard_truth, gra_truth]
-
-
-
-    def sbd_on_trecvid(self):
+    def sbd_on_rai(self):
 
         current_dir = os.path.join(os.sep.join(os.path.realpath(__file__).split(os.sep)[:-1]))
 
-        path_to_frames = '/home/DSBD_Test/segments'
+        path_to_video = 'videos'
 
-        videos = glob(os.sep.join([path_to_frames, '*']))
-
-        labels_path = '/home/t2007ref'
+        videos = glob(os.sep.join([path_to_video, '*.mp4']))
 
         cut_correct = 0
 
@@ -748,25 +730,31 @@ class SBD():
 
         all_n = 0
 
-        for i in videos:
+        log_file_path = '/home/RAI_Test_log_resnet34_60000.log'
 
-            # if cmp(i.split(os.sep)[-1], 'BG_34901') != 0:
-            #     continue
+        for video in videos:
 
-            print 'Now', i.split(os.sep)[-1], ' is analyasing...'
+            if cmp(video.split(os.sep)[-1], '9.mp4') != 0:
+
+                continue
+
+            print 'Now', video.split(os.sep)[-1], ' is analyasing...'
 
             begin_time = time.time()
 
-            self.extract_features(i)
+            # get labels
+            [hard_truth, gra_truth] = self.get_labels_rai(
+                './videos/annotations/gt_' + video.split(os.sep)[-1].split('.')[0] + '.txt')
 
-            [hard_segments, gra_segments] = self.get_candidate_segments()
+            # get all candidate segments (to be sent to CNN)
+            candidate_segments = self.generate_candidate_segments(video)
 
-            hard_segments = self.remove_invalid_segments(hard_segments, i)
+            self.extract_features(video, current_dir, candidate_segments)
 
-            gra_segments = self.remove_invalid_segments2(gra_segments, i)
+            [hard_segments, gra_segments] = self.get_hard_and_gra_segments()
 
-            [hard_truth, gra_truth] = self.get_labels_TRECViD(os.sep.join([labels_path, 'ref_' + i.split(os.sep)[-1] + '.xml']))
-
+            gra_segments = self.remove_invalid_segments(gra_segments, video)
+            #
             new_gra_segments = [deepcopy(gra_segments[0])]
 
             for gra in gra_segments[1:]:
@@ -779,57 +767,40 @@ class SBD():
 
                     new_gra_segments.append(deepcopy(gra))
 
-            new_hard_segments = [deepcopy(hard_segments[0])]
-
-            for hard in hard_segments[1:]:
-
-                if self.if_overlap(new_hard_segments[-1][0], new_hard_segments[-1][1], hard[0], hard[1]):
-
-                    new_hard_segments[-1][1] = hard[1]
-
-                else:
-
-                    new_hard_segments.append(deepcopy(hard))
-
-
-
-            # self.eval(new_hard_segments, hard_truth)
-            #
-            # self.eval(new_gra_segments, gra_truth)
-
-            # print self.eval(new_hard_segments, hard_truth, new_gra_segments, gra_truth)
-
             cut_t += len(hard_truth)
             gra_t += len(gra_truth)
             all_t += len(hard_truth) + len(gra_truth)
 
-            cut_correct_n, gra_correct_n, all_correct_n = self.eval(new_hard_segments, hard_truth, new_gra_segments, gra_truth)
+            cut_correct_n, gra_correct_n, all_correct_n = self.eval(hard_segments, hard_truth, new_gra_segments, gra_truth)
 
             cut_correct += cut_correct_n
             gra_correct += gra_correct_n
-            all_correct += all_correct_n
+            all_correct += cut_correct_n+gra_correct_n
 
-            cut_n += len(new_hard_segments)
+            cut_n += len(hard_segments)
             gra_n += len(new_gra_segments)
-            all_n += len(new_gra_segments+new_hard_segments)
+            all_n += len(new_gra_segments+hard_segments)
 
-            result = [str(i)+'\n',str(len(hard_truth))+' ' + str(cut_correct_n) + ' '+str(len(new_hard_segments)-cut_correct_n)+' '+str(len(hard_truth) - cut_correct_n)+'\n',
-                      str(len(gra_truth))+' ' + str(gra_correct_n) + ' '+str(len(new_gra_segments)-gra_correct_n)+' '+str(len(gra_truth) - gra_correct_n)+'\n',
-                      str(self.recall_pre_f1(gra_correct_n, len(gra_truth), len(new_gra_segments)))+'\n',
-                      str(self.recall_pre_f1(cut_correct_n, len(hard_truth), len(new_hard_segments)))+'\n',
-                      str(self.recall_pre_f1(all_correct_n, len(new_hard_segments+new_gra_segments),len(hard_truth+gra_truth)))+'\n']
-            with open ('/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/TRECVID_Test_log_pre3.log', 'a') as f:
-                f.writelines(result)
+            result = ['hard_prob_thresh: 0.7, gra_prob_thresh: None, bha_thresh: 2,\n', str(video) + '\n',
+                      str(gra_correct_n), '\t', str(len(new_gra_segments)), '\t', str(len(gra_truth)), '\n', str(cut_correct_n), '\t', str(len(hard_segments)),
+                      '\t', str(len(hard_truth)), '\n']
+
 
             end_time = time.time()
 
             print 'the cost of time is ', str(end_time - begin_time), '\n'
 
-        with open('/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/TRECVID_Test_log_pre3.log', 'a') as f:
-            f.writelines(['all_results:\n',str(self.recall_pre_f1(gra_correct, gra_t, gra_n))+'\n',str(self.recall_pre_f1(cut_correct, cut_t, cut_n))+'\n', str(self.recall_pre_f1(all_correct, all_t, all_n))])
+        result = ['All: ', str(self.recall_pre_f1(all_correct, all_t, all_n))]
+
+        # with open(log_file_path, 'a') as f:
+        #
+        #     f.writelines(result)
+
+
 
 if  __name__ == '__main__':
 
     test1 = SBD()
-    test1.sbd_on_trecvid()
-# test1.get_candidate_segments()
+    test1.sbd_on_rai()
+    # test1.get_candidate_segments()
+
