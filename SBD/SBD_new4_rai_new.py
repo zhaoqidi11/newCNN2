@@ -302,13 +302,17 @@ class SBD():
         #
         # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group4/train_group_pool_pad_2_iter_60000.caffemodel'
 
-        model_file = 'feature_extract_pre_deep.prototxt'
+        # model_file = 'feature_extract_pre_deep.prototxt'
+        #
+        # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_deep_train_group_pool_pad/models/pre_deep_train_group_pool_pad_iter_35000.caffemodel'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_deep_train_group_pool_pad/models/pre_deep_train_group_pool_pad_iter_35000.caffemodel'
+        model_file = 'feature_extract_pre3.prototxt'
+
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/pre_train_group_pool_pad3_iter_45000.caffemodel'
 
         gpu_id = '1'
 
-        batch_size = '24'
+        batch_size = '20'
 
         batch_num = str(int(math.ceil(float(len(candidate_segments)) / int(batch_size))))
 
@@ -549,7 +553,7 @@ class SBD():
             # if 0.5*self.get_pixel_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) + \
             #         0.5*self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 200:
 
-            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 5:
+            if self.get_hist_chi_squa_diff(first_frame, last_frame, first_frame.shape[1] * first_frame.shape[0]) < 2:
 
             # if self.get_hist_manh_diff(cv2.cvtColor(first_frame, cv2.COLOR_BGR2HSV), cv2.cvtColor(last_frame, cv2.COLOR_BGR2HSV), first_frame.shape[1] * first_frame.shape[0]) <0.5:
 
@@ -814,24 +818,38 @@ class SBD():
 
         gra_segments = []
 
+        gra_segments_prob = []
+
         prob_list = {}
 
         for i in all_segments:
 
             (s, prob) = read_binary_blob(i + suffix)
 
-            if np.argmax(prob) == 1:
+            if np.argmax(prob) == 1 and max(prob) > 0.7:
 
                 # print prob,'\n'
 
                 # if len(gra_segments) > 0 and (self.if_overlap(gra_segments[-1][0], gra_segments[-1][1],
-                #                                               int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length) or int(i.split(os.sep)[-1])-gra_segments[-1][1] == 1):
+                #                                               int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length)):
                 #
-                #     gra_segments[-1][1] = int(i.split(os.sep)[-1]) + length
+                #     if prob[1] > gra_segments_prob[-1]:
                 #
+                #         gra_segments[-1] = [int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length]
+                #
+                #         gra_segments_prob[-1] = prob[1]
+                #
+                # elif len(gra_segments) > 0 and int(i.split(os.sep)[-1])-gra_segments[-1][1] == 1:
+                #
+                #         gra_segments[-1][1] = int(i.split(os.sep)[-1]) + length
+
                 # else:
                 #
                 #     gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
+                #
+                #     gra_segments_prob.append(prob[1])
+                #
+                # gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
                 gra_segments.append([int(i.split(os.sep)[-1]), int(i.split(os.sep)[-1]) + length])
 
@@ -877,7 +895,7 @@ class SBD():
 
         all_n = 0
 
-        log_file_path = '/home/C3D/C3D-v1.1/latest_result/models/pre_deep_train_group_pool_pad/RAI_Test_log_pre_deep_35000_2.log'
+        log_file_path = '/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/get_location_RAI_Test_log_pre3_45000.log'
 
         for i in videos:
 
@@ -921,7 +939,7 @@ class SBD():
 
             # hard_segments = self.remove_invalid_segments2(hard_segments, i)
 
-            # hard_segments = self.get_location(hard_segments, i)
+            hard_segments = self.get_location(hard_segments, i)
 
             # gra_count, gra_cut, gra_t  = self.eval(new_gra_segments, gra_truth)
             #
@@ -941,7 +959,7 @@ class SBD():
             gra_n += len(new_gra_segments)
             all_n += len(new_gra_segments+hard_segments)
 
-            result = ['hard_prob_thresh: 0.7, gra_prob_thresh: None, chi_squr_gra_thresh: 5,\n', str(i) + '\n',
+            result = ['hard_prob_thresh: 0.7, gra_prob_thresh: 0.7, chi_squr_gra_thresh: 2,\n', str(i) + '\n',
                       str(gra_correct_n), '\t', str(len(new_gra_segments)), '\t', str(len(gra_truth)), '\n', str(cut_correct_n), '\t', str(len(hard_segments)),
                       '\t', str(len(hard_truth)), '\n']
 

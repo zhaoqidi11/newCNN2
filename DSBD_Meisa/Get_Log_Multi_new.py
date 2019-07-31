@@ -32,35 +32,40 @@ def Get_Data(data):
     print(results2)
 
     i = 0
+    train_loss_ = 0
+
     for result in results1:
-        if i%option == 0:
+        if i%option == 0 and i!=0:
             train_iter_num.append(int(result[1]))
-            train_loss.append(float(result[-1]))
+            train_loss.append(train_loss_/option)
+            train_loss_ = 0
+        else:
+            train_loss_ += float(result[-1])
         i += 1
 
-    j = 0
+
     for result in results2:
-        if j%option == 0:
-            iter_num.append(int(result[-3]))
-            test_loss.append(float(result[3]))
-            test_ac.append(float(result[1]))
-        j += 1
+        iter_num.append(int(result[-3]))
+        test_loss.append(float(result[3]))
+        test_ac.append(float(result[1]))
+
 
     return {'train_iter_num':train_iter_num, 'train_loss':train_loss, 'test_iter_num':iter_num, 'test_loss':test_loss,'test_a':test_ac}
 
 if __name__ == '__main__':
 
-    with open('/home/C3D/C3D-v1.1/latest_result/models/deep_train_group_pool_pad/new/deep.log') as f:
+    with open('/home/C3D/C3D-v1.1/latest_result/models/bn_train_fewer/bn_train_fewer.log') as f:
         data1 = f.read()
 
-    with open('/home/C3D/C3D-v1.1/latest_result/models/bn_train_fewer/bn_train_fewer.log') as f:
+    with open('/home/C3D/C3D-v1.1/latest_result/models/bn_train_pool_pad/bn_train_pool_pad_4.log') as f:
         data2 = f.read()
 
-    with open('/home/C3D/C3D-v1.1/latest_result/models/train_group_pool_pad/train_pool_pad.log') as f:
+    with open('/home/C3D/C3D-v1.1/latest_result/models/deep_train_group_pool_pad/new/deep.log') as f:
         data3 = f.read()
 
-    with open('/home/C3D/C3D-v1.1/latest_result/models/bn_train_pool_pad/bn_train_pool_pad_4.log') as f:
+    with open('/home/C3D/C3D-v1.1/latest_result/models/train_group_pool_pad/train_pool_pad.log') as f:
         data4 = f.read()
+
 
     results1 = Get_Data(data1)
     results2 = Get_Data(data2)
@@ -68,11 +73,13 @@ if __name__ == '__main__':
     results4 = Get_Data(data4)
 
     option = 'train'
-
-    plt.plot(results1[option+'_iter_num'], results1[option+'_loss'], color='green', label='1')
-    plt.plot(results2[option+'_iter_num'], results2[option+'_loss'], color='red', label='2')
-    plt.plot(results3[option+'_iter_num'], results3[option+'_loss'], color='pink', label='3')
-    plt.plot(results4[option+'_iter_num'], results4[option+'_loss'], color='black', label='4')
+    plt.figure(figsize=(4.5, 4.5))
+    plt.plot(results1[option+'_iter_num'], results1[option+'_loss'], color='red', label='3D ResNet with BN')
+    plt.plot(results2[option+'_iter_num'], results2[option+'_loss'], color='green', label='a variation of 3D ResNet with BN')
+    plt.plot(results3[option+'_iter_num'], results3[option+'_loss'], color='dodgerblue', label='3D ResNet with GN')
+    plt.plot(results4[option+'_iter_num'], results4[option+'_loss'], color='hotpink', label='a variation of 3D ResNet with GN')
+    plt.xlabel('batches')
+    plt.ylabel(option+' loss')
 
     plt.legend()
 

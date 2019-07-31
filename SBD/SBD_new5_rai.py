@@ -302,7 +302,9 @@ class SBD():
 
         model_file = 'feature_extract_pool_pad.prototxt'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group_pool_pad/train_group_pool_pad_iter_45000.caffemodel'
+        # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group_pool_pad/train_group_pool_pad_iter_45000.caffemodel'
+
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/train_group_pool_pad/models2/models2_train_group_pool_pad_iter_45000.caffemodel'
 
         gpu_id = '1'
 
@@ -730,13 +732,13 @@ class SBD():
 
         all_n = 0
 
-        log_file_path = '/home/RAI_Test_log_resnet34_60000.log'
+        log_file_path = '/home/C3D/C3D-v1.1/latest_result/models/train_group_pool_pad/models2/RAI_Test_log_45000.log'
 
         for video in videos:
 
-            if cmp(video.split(os.sep)[-1], '9.mp4') != 0:
-
-                continue
+            # if cmp(video.split(os.sep)[-1], '9.mp4') != 0:
+            #
+            #     continue
 
             print 'Now', video.split(os.sep)[-1], ' is analyasing...'
 
@@ -785,6 +787,9 @@ class SBD():
                       str(gra_correct_n), '\t', str(len(new_gra_segments)), '\t', str(len(gra_truth)), '\n', str(cut_correct_n), '\t', str(len(hard_segments)),
                       '\t', str(len(hard_truth)), '\n']
 
+            with open(log_file_path, 'a') as f:
+
+                f.writelines(result)
 
             end_time = time.time()
 
@@ -792,9 +797,9 @@ class SBD():
 
         result = ['All: ', str(self.recall_pre_f1(all_correct, all_t, all_n))]
 
-        # with open(log_file_path, 'a') as f:
-        #
-        #     f.writelines(result)
+        with open(log_file_path, 'a') as f:
+
+            f.writelines(result)
 
 
 
