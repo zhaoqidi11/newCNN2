@@ -306,13 +306,17 @@ class SBD():
         #
         # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_deep_train_group_pool_pad/models/pre_deep_train_group_pool_pad_iter_35000.caffemodel'
 
-        model_file = 'feature_extract_pre3.prototxt'
+        # model_file = 'feature_extract_pre3.prototxt'
+        #
+        # caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/pre_train_group_pool_pad3_iter_45000.caffemodel'
 
-        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/pre_train_group_pool_pad3_iter_45000.caffemodel'
+        model_file = 'feature_extract_pre_deep_small.prototxt'
+
+        caffemodel = '/home/C3D/C3D-v1.1/latest_result/models/pre_deep_train_group_pool_pad/small_resolution/pre_deep_iter_35000.caffemodel'
 
         gpu_id = '1'
 
-        batch_size = '20'
+        batch_size = '24'
 
         batch_num = str(int(math.ceil(float(len(candidate_segments)) / int(batch_size))))
 
@@ -895,7 +899,7 @@ class SBD():
 
         all_n = 0
 
-        log_file_path = '/home/C3D/C3D-v1.1/latest_result/models/pre_train_group_pool_pad3/get_location_RAI_Test_log_pre3_45000.log'
+        log_file_path = '/home/C3D/C3D-v1.1/latest_result/models/pre_deep_train_group_pool_pad/small_resolution/RAI_Test_log_pre_deep_small_35000.log'
 
         for i in videos:
 
@@ -939,7 +943,7 @@ class SBD():
 
             # hard_segments = self.remove_invalid_segments2(hard_segments, i)
 
-            hard_segments = self.get_location(hard_segments, i)
+            # hard_segments = self.get_location(hard_segments, i)
 
             # gra_count, gra_cut, gra_t  = self.eval(new_gra_segments, gra_truth)
             #
